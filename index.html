@@ -32,11 +32,11 @@
       <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
         <p class="text-xs text-gray-500 font-semibold uppercase">Total Contas da Casa</p>
         <p id="total-shared" class="text-2xl font-extrabold text-gray-900 mt-1">R$ 0,00</p>
-        <p class="text-xs text-indigo-600 font-medium mt-1">R$ 0,00 por pessoa (50%)</p>
+        <p id="total-per-person" class="text-xs text-indigo-600 font-medium mt-1">R$ 0,00 por pessoa (50%)</p>
       </div>
       <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
         <p class="text-xs text-gray-500 font-semibold uppercase">Investimento Acumulado</p>
-        <p id="total-invested" class="text-2xl font-extrabold text-emerald-600 mt-1">R$ 0,00</p>
+        <p id="total-investido" class="text-2xl font-extrabold text-emerald-600 mt-1">R$ 0,00</p>
         <p class="text-xs text-gray-400 mt-1">Renda Fixa</p>
       </div>
       <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
@@ -47,18 +47,210 @@
     </div>
 
     <!-- Abas de Navegação -->
-    <div class="flex border-b border-gray-200 bg-white rounded-t-xl px-2">
-      <button onclick="switchTab('lancamentos')" class="tab-btn font-medium py-3 px-4 border-b-2 border-indigo-600 text-indigo-600" id="tab-lancamentos">Apontamentos</button>
-      <button onclick="switchTab('calendario')" class="tab-btn font-medium py-3 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700" id="tab-calendario">Próximos 12 Meses</button>
-      <button onclick="switchTab('investimentos')" class="tab-btn font-medium py-3 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700" id="tab-investimentos">Investimentos & Simulação</button>
+    <div class="flex border-b border-gray-200 bg-white rounded-t-xl px-2 overflow-x-auto">
+      <button onclick="switchTab('lancamentos')" class="tab-btn font-medium py-3 px-4 border-b-2 border-indigo-600 text-indigo-600 whitespace-nowrap" id="tab-lancamentos">Apontamentos</button>
+      <button onclick="switchTab('calendario')" class="tab-btn font-medium py-3 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" id="tab-calendario">Próximos 12 Meses</button>
+      <button onclick="switchTab('investimentos')" class="tab-btn font-medium py-3 px-4 border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" id="tab-investimentos">Investimentos & Simulação</button>
     </div>
 
     <!-- Conteúdo das Abas -->
     <div id="content-area" class="bg-white p-6 rounded-b-xl shadow-sm border border-t-0 border-gray-200">
-      <p class="text-gray-600">Carregando módulos do sistema...</p>
+      
+      <!-- ABA 1: LANÇAMENTOS -->
+      <div id="sec-lancamentos" class="tab-content space-y-6">
+        <h2 class="text-lg font-bold text-gray-800">Novo Apontamento</h2>
+        <form id="form-lancamento" onsubmit="salvarLancamento(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
+            <input type="text" id="lanc-descricao" required placeholder="Ex: Luz, Mercado, Custo Fixo" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Valor (R$)</label>
+            <input type="number" step="0.01" id="lanc-valor" required placeholder="0.00" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Data Vencimento/Apontamento</label>
+            <input type="date" id="lanc-data" required class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Categoria</label>
+            <select id="lanc-categoria" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+              <option value="Casa Compartilhada">Casa Compartilhada (Divisão 50%)</option>
+              <option value="Pessoal">Despesa Pessoal</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+            <select id="lanc-status" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+              <option value="Pendente">Pendente</option>
+              <option value="Pago">Pago</option>
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded hover:bg-indigo-700 transition">Adicionar Apontamento</button>
+          </div>
+        </form>
+
+        <h3 class="text-md font-bold text-gray-800 pt-4 border-t">Histórico de Lançamentos</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-gray-600">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+              <tr>
+                <th class="p-3">Descrição</th>
+                <th class="p-3">Categoria</th>
+                <th class="p-3">Data</th>
+                <th class="p-3">Valor</th>
+                <th class="p-3">Status</th>
+                <th class="p-3 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-lancamentos" class="divide-y divide-gray-200">
+              <tr><td colspan="6" class="p-3 text-center">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ABA 2: CALENDÁRIO 12 MESES -->
+      <div id="sec-calendario" class="tab-content hidden space-y-4">
+        <h2 class="text-lg font-bold text-gray-800">Projeção dos Próximos 12 Meses</h2>
+        <p class="text-xs text-gray-500">Visualização simplificada das contas estimadas por mês.</p>
+        <div id="grid-calendario" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Gerado dinamicamente via calendário.js -->
+        </div>
+      </div>
+
+      <!-- ABA 3: INVESTIMENTOS & SIMULAÇÃO -->
+      <div id="sec-investimentos" class="tab-content hidden space-y-6">
+        <h2 class="text-lg font-bold text-gray-800">Registrar Novo Aporte em Renda Fixa</h2>
+        <form id="form-investimento" onsubmit="salvarInvestimento(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Nome do Ativo / Banco</label>
+            <input type="text" id="inv-ativo" required placeholder="Ex: CDB CredCrea, LCI BTG" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Tipo</label>
+            <select id="inv-tipo" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none">
+              <option value="CDB">CDB</option>
+              <option value="LCI/LCA">LCI / LCA</option>
+              <option value="Tesouro Selic">Tesouro Selic</option>
+              <option value="Fundo/Outros">Outros</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">% do CDI</label>
+            <input type="number" id="inv-taxa" step="0.1" required placeholder="Ex: 100, 110" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Liquidez</label>
+            <select id="inv-liquidez" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none">
+              <option value="Diária">Diária</option>
+              <option value="No Vencimento">No Vencimento</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Valor Aportado (R$)</label>
+            <input type="number" id="inv-valor" step="0.01" required placeholder="0.00" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Data da Aplicação</label>
+            <input type="date" id="inv-data" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none">
+          </div>
+          <div class="md:col-span-3 flex justify-end">
+            <button type="submit" class="bg-emerald-600 text-white font-medium py-2 px-6 rounded hover:bg-emerald-700 transition">Salvar Investimento</button>
+          </div>
+        </form>
+
+        <h3 class="text-md font-bold text-gray-800 pt-4 border-t">Carteira Registrada</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-gray-600">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+              <tr>
+                <th class="p-3">Ativo</th>
+                <th class="p-3">Tipo</th>
+                <th class="p-3">Rentabilidade</th>
+                <th class="p-3">Liquidez</th>
+                <th class="p-3">Valor</th>
+                <th class="p-3 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-investimentos" class="divide-y divide-gray-200">
+              <tr><td colspan="6" class="p-3 text-center">Nenhum ativo carregado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- SIMULADOR DE RENDA FIXA -->
+        <div class="bg-indigo-50 p-6 rounded-xl border border-indigo-100 space-y-4 mt-6">
+          <h3 class="text-md font-bold text-indigo-900">Simulador de Rendimento por Mês (% do CDI)</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Aporte Inicial (R$)</label>
+              <input type="number" id="sim-inicial" value="1000" oninput="calcularSimulacaoRendaFixa()" class="w-full border border-gray-300 rounded p-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Aporte Mensal (R$)</label>
+              <input type="number" id="sim-mensal" value="500" oninput="calcularSimulacaoRendaFixa()" class="w-full border border-gray-300 rounded p-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">% do CDI da Aplicação</label>
+              <input type="number" id="sim-cdi" value="100" oninput="calcularSimulacaoRendaFixa()" class="w-full border border-gray-300 rounded p-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Taxa CDI Anual Est. (%)</label>
+              <input type="number" id="sim-cdi-anual" step="0.01" value="10.75" oninput="calcularSimulacaoRendaFixa()" class="w-full border border-gray-300 rounded p-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Período (Meses)</label>
+              <input type="number" id="sim-meses" value="12" oninput="calcularSimulacaoRendaFixa()" class="w-full border border-gray-300 rounded p-2 text-sm">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-4 rounded-lg shadow-sm border border-indigo-100 mt-4">
+            <div>
+              <span class="block text-xs text-gray-500">Total Investido (Bolso)</span>
+              <span id="sim-resultado-aportado" class="text-lg font-bold text-gray-800">R$ 0,00</span>
+            </div>
+            <div>
+              <span class="block text-xs text-gray-500">Rendimento Estimado (Juros)</span>
+              <span id="sim-resultado-juros" class="text-lg font-bold text-emerald-600">R$ 0,00</span>
+            </div>
+            <div>
+              <span class="block text-xs text-gray-500">Saldo Final Bruto</span>
+              <span id="sim-resultado-saldo" class="text-lg font-bold text-indigo-700">R$ 0,00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
 
+  <!-- LÓGICA DE TROCA DE ABAS -->
+  <script>
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(el => {
+        el.classList.remove('border-indigo-600', 'text-indigo-600');
+        el.classList.add('border-transparent', 'text-gray-500');
+      });
+
+      const activeSec = document.getElementById(`sec-${tabName}`);
+      const activeBtn = document.getElementById(`tab-${tabName}`);
+
+      if (activeSec) activeSec.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.classList.remove('border-transparent', 'text-gray-500');
+        activeBtn.classList.add('border-indigo-600', 'text-indigo-600');
+      }
+
+      if (tabName === 'investimentos' && typeof carregarInvestimentos === 'function') {
+        carregarInvestimentos();
+      }
+    }
+  </script>
+
+  <!-- ARQUIVOS JS SEPARADOS DO PROJETO -->
   <script src="supabase-config.js"></script>
   <script src="lancamentos.js"></script>
   <script src="calendario.js"></script>
