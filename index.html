@@ -201,176 +201,173 @@
         <div id="grid-calendario" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2"></div>
       </div>
 
-      <!-- ABA INVESTIMENTOS (ATUALIZADA) -->
-      <div id="sec-investimentos" class="tab-content hidden space-y-6">
-        <div>
-          <h2 class="text-lg font-bold text-gray-800">Carteira de Renda Fixa (CDB)</h2>
-          <p class="text-xs text-gray-500">Acompanhamento de aportes, resgates, rendimentos mensais e calculadora dinâmica</p>
-        </div>
+<!-- ABA INVESTIMENTOS (ATUALIZADA PARA 12 MESES E METAS INDIVIDUAIS) -->
+<div id="sec-investimentos" class="tab-content hidden space-y-6">
+  <div>
+    <h2 class="text-lg font-bold text-gray-800">Carteira de Renda Fixa (CDB)</h2>
+    <p class="text-xs text-gray-500">Acompanhamento de aportes, resgates, rendimentos mensais e calculadora dinâmica</p>
+  </div>
 
-        <!-- CARDS DE RESUMO DA RENDA FIXA -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <span class="text-xs font-semibold text-gray-500 uppercase">Patrimônio Acumulado</span>
-            <div id="inv-total-acumulado" class="text-xl font-bold text-gray-800 mt-1">R$ 0,00</div>
-            <span class="text-[11px] text-gray-400">Saldo atual nos CDBs</span>
-          </div>
+  <!-- CARDS DE RESUMO DA RENDA FIXA -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+      <span class="text-xs font-semibold text-gray-500 uppercase">Patrimônio Acumulado</span>
+      <div id="inv-total-acumulado" class="text-xl font-bold text-gray-800 mt-1">R$ 0,00</div>
+      <span class="text-[11px] text-gray-400">Saldo atual nos CDBs</span>
+    </div>
 
-          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <span class="text-xs font-semibold text-gray-500 uppercase">Rendimento no Ano</span>
-            <div id="inv-rendimento-ano" class="text-xl font-bold text-emerald-600 mt-1">R$ 0,00</div>
-            <span class="text-[11px] text-emerald-700">Lucro líquido acumulado</span>
-          </div>
+    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+      <span class="text-xs font-semibold text-gray-500 uppercase">Rendimento no Ano</span>
+      <div id="inv-rendimento-ano" class="text-xl font-bold text-emerald-600 mt-1">R$ 0,00</div>
+      <span class="text-[11px] text-emerald-700">Lucro líquido acumulado</span>
+    </div>
 
-          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <span class="text-xs font-semibold text-gray-500 uppercase">Aporte Mês Atual</span>
-            <div id="inv-aporte-mes" class="text-xl font-bold text-indigo-600 mt-1">R$ 0,00</div>
-            <span id="inv-progresso-meta" class="text-[11px] text-gray-500">Aportado neste mês</span>
-          </div>
+    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+      <span class="text-xs font-semibold text-gray-500 uppercase">Aporte Mês Atual</span>
+      <div id="inv-aporte-mes" class="text-xl font-bold text-indigo-600 mt-1">R$ 0,00</div>
+      <span id="inv-progresso-meta" class="text-[11px] text-gray-500">Aportado neste mês</span>
+    </div>
 
-          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <span class="text-xs font-semibold text-gray-500 uppercase">Meta Mensal do Casal</span>
-            <div id="inv-meta-casal" class="text-xl font-bold text-purple-600 mt-1">R$ 1.500,00</div>
-            <span class="text-[11px] text-gray-500">Meta configurada</span>
-          </div>
-        </div>
+    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+      <span class="text-xs font-semibold text-gray-500 uppercase">Meta Mensal do Casal</span>
+      <div id="inv-meta-casal" class="text-xl font-bold text-purple-600 mt-1">R$ 1.500,00</div>
+      <span id="inv-meta-individual" class="text-[11px] text-gray-500">Diego: R$ 750 | Gise: R$ 750</span>
+    </div>
+  </div>
 
-        <!-- CALCULADORA E SIMULADOR DINÂMICO (DARK MODE) -->
-        <div class="bg-gray-900 text-white p-6 rounded-xl shadow-lg space-y-6">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <h3 class="text-base font-bold">Calculadora & Projeção Dinâmica</h3>
-              <p class="text-xs text-gray-400">Simule o crescimento do seu montante com juros compostos e aportes regulares</p>
-            </div>
-            <div class="text-right bg-gray-800 p-2.5 rounded-lg border border-gray-700">
-              <span class="text-[10px] text-gray-400 uppercase block">Valor Esperado ao Final</span>
-              <span id="sim-valor-final" class="text-xl font-extrabold text-emerald-400">R$ 0,00</span>
-            </div>
-          </div>
+  <!-- CALCULADORA E SIMULADOR DINÂMICO (MÁXIMO 12 MESES) -->
+  <div class="bg-gray-900 text-white p-6 rounded-xl shadow-lg space-y-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <h3 class="text-base font-bold">Calculadora & Projeção Dinâmica</h3>
+        <p class="text-xs text-gray-400">Simule o crescimento do montante com juros compostos e aportes mensais</p>
+      </div>
+      <div class="text-right bg-gray-800 p-2.5 rounded-lg border border-gray-700">
+        <span class="text-[10px] text-gray-400 uppercase block">Valor Esperado ao Final</span>
+        <span id="sim-valor-final" class="text-xl font-extrabold text-emerald-400">R$ 0,00</span>
+      </div>
+    </div>
 
-          <!-- GRÁFICO -->
-          <div class="h-60 w-full">
-            <canvas id="graficoProjecao"></canvas>
-          </div>
+    <!-- GRÁFICO -->
+    <div class="h-60 w-full">
+      <canvas id="graficoProjecao"></canvas>
+    </div>
 
-          <!-- CONTROLES DO SIMULADOR (SLIDERS) -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-800 text-xs">
-            <div>
-              <label class="flex justify-between font-semibold text-gray-300 mb-1">
-                <span>Patrimônio Inicial:</span>
-                <span id="disp-patrimonio" class="text-indigo-400 font-bold">R$ 0</span>
-              </label>
-              <input type="range" id="sim-patrimonio" min="0" max="200000" step="1000" value="0" oninput="atualizarSimulacao()" class="w-full accent-indigo-500">
-            </div>
-
-            <div>
-              <label class="flex justify-between font-semibold text-gray-300 mb-1">
-                <span>Meta Aporte Mensal:</span>
-                <span id="disp-aporte" class="text-indigo-400 font-bold">R$ 1.500</span>
-              </label>
-              <input type="range" id="sim-aporte" min="0" max="20000" step="250" value="1500" oninput="atualizarSimulacao()" class="w-full accent-indigo-500">
-            </div>
-
-            <div>
-              <label class="flex justify-between font-semibold text-gray-300 mb-1">
-                <span>Taxa Esperada (% a.a.):</span>
-                <span id="disp-taxa" class="text-indigo-400 font-bold">10.5%</span>
-              </label>
-              <input type="range" id="sim-taxa" min="5" max="20" step="0.5" value="10.5" oninput="atualizarSimulacao()" class="w-full accent-indigo-500">
-            </div>
-
-            <div>
-              <label class="flex justify-between font-semibold text-gray-300 mb-1">
-                <span>Horizonte de Tempo:</span>
-                <span id="disp-anos" class="text-indigo-400 font-bold">5 anos</span>
-              </label>
-              <input type="range" id="sim-anos" min="1" max="30" step="1" value="5" oninput="atualizarSimulacao()" class="w-full accent-indigo-500">
-            </div>
-          </div>
-        </div>
-
-        <!-- FORMULÁRIO DE REGISTRO E TABELA DE HISTÓRICO -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          <!-- REGISTRAR APORTE / RESGATE / RENDIMENTO -->
-          <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
-            <h3 class="font-bold text-gray-800 text-sm">Registrar Operação no CDB</h3>
-            <form id="form-cdb-operacao" onsubmit="salvarOperacaoCDB(event)" class="space-y-3">
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Título do CDB</label>
-                <select id="cdb-titulo-id" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
-                  <option value="">Carregando títulos...</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Quem Pagou / Perfil</label>
-                <select id="cdb-perfil-id" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
-                  <option value="">Carregando perfis...</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Tipo de Operação</label>
-                <select id="cdb-tipo-op" onchange="alternarCamposOperacao()" class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
-                  <option value="deposit">Aporte (Novo Investimento)</option>
-                  <option value="yield">Rendimento Fechado do Mês</option>
-                  <option value="withdrawal">Resgate / Saque (Com IR)</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Valor (R$)</label>
-                <input type="number" step="0.01" id="cdb-valor" required placeholder="0.00" class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-gray-600 mb-1">Data da Operação</label>
-                <input type="date" id="cdb-data" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
-              </div>
-
-              <!-- CAMPO DE TRIBUTAÇÃO IR APENAS EM RESGATES -->
-              <div id="box-campo-ir" class="hidden bg-amber-50 p-2.5 rounded border border-amber-200 space-y-1">
-                <label class="block text-[11px] font-bold text-amber-800">Dias de Permanência (Para tabela regressiva de IR):</label>
-                <input type="number" id="cdb-dias-investido" placeholder="Ex: 90, 200, 400 dias" class="w-full border border-amber-300 rounded p-1.5 text-xs bg-white">
-                <span class="text-[10px] text-amber-700 block">Até 180d: 22.5% | 181-360d: 20% | 361-720d: 17.5% | +720d: 15%</span>
-              </div>
-
-              <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded hover:bg-indigo-700 transition text-xs">
-                Salvar Operação
-              </button>
-            </form>
-          </div>
-
-          <!-- TABELA DE HISTÓRICO DE INVESTIMENTOS -->
-          <div class="lg:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
-            <h3 class="font-bold text-gray-800 text-sm">Histórico de Movimentações em CDB</h3>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left text-xs text-gray-600">
-                <thead class="bg-white uppercase text-gray-400 border-b">
-                  <tr>
-                    <th class="p-2">Data</th>
-                    <th class="p-2">Título</th>
-                    <th class="p-2">Perfil</th>
-                    <th class="p-2">Tipo</th>
-                    <th class="p-2">Valor</th>
-                    <th class="p-2">IR Retido</th>
-                  </tr>
-                </thead>
-                <tbody id="tbody-cdb-historico" class="divide-y divide-gray-200">
-                  <tr>
-                    <td colspan="6" class="p-3 text-center text-gray-400">Carregando movimentações...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </div>
+    <!-- CONTROLES DO SIMULADOR (SLIDERS) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-800 text-xs">
+      <div>
+        <label class="flex justify-between font-semibold text-gray-300 mb-1">
+          <span>Patrimônio Inicial:</span>
+          <span id="disp-patrimonio" class="text-indigo-400 font-bold">R$ 0</span>
+        </label>
+        <input type="range" id="sim-patrimonio" min="0" max="200000" step="1000" value="0" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
       </div>
 
-    </main>
+      <div>
+        <label class="flex justify-between font-semibold text-gray-300 mb-1">
+          <span>Meta Aporte Casal:</span>
+          <span id="disp-aporte" class="text-indigo-400 font-bold">R$ 1.500</span>
+        </label>
+        <input type="range" id="sim-aporte" min="0" max="20000" step="250" value="1500" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
+      </div>
+
+      <div>
+        <label class="flex justify-between font-semibold text-gray-300 mb-1">
+          <span>Taxa Esperada (% a.a.):</span>
+          <span id="disp-taxa" class="text-indigo-400 font-bold">10.5%</span>
+        </label>
+        <input type="range" id="sim-taxa" min="5" max="20" step="0.5" value="10.5" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
+      </div>
+
+      <div>
+        <label class="flex justify-between font-semibold text-gray-300 mb-1">
+          <span>Horizonte (Meses - Máx 12):</span>
+          <span id="disp-meses" class="text-indigo-400 font-bold">12 meses</span>
+        </label>
+        <input type="range" id="sim-meses" min="1" max="12" step="1" value="12" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
+      </div>
+    </div>
   </div>
+
+  <!-- FORMULÁRIO DE REGISTRO E TABELA DE HISTÓRICO -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- REGISTRAR APORTE / RESGATE / RENDIMENTO -->
+    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+      <h3 class="font-bold text-gray-800 text-sm">Registrar Operação no CDB</h3>
+      <form id="form-cdb-operacao" onsubmit="salvarOperacaoCDB(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Título do CDB</label>
+          <select id="cdb-titulo-id" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+            <option value="">Carregando títulos...</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Quem Pagou / Perfil</label>
+          <select id="cdb-perfil-id" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+            <option value="">Carregando perfis...</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Tipo de Operação</label>
+          <select id="cdb-tipo-op" onchange="alternarCamposOperacao()" class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+            <option value="deposit">Aporte (Novo Investimento)</option>
+            <option value="yield">Rendimento Fechado do Mês</option>
+            <option value="withdrawal">Resgate / Saque (Com IR)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Valor (R$)</label>
+          <input type="number" step="0.01" id="cdb-valor" required placeholder="0.00" class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Data da Operação</label>
+          <input type="date" id="cdb-data" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <!-- CAMPO DE TRIBUTAÇÃO IR APENAS EM RESGATES -->
+        <div id="box-campo-ir" class="hidden bg-amber-50 p-2.5 rounded border border-amber-200 space-y-1">
+          <label class="block text-[11px] font-bold text-amber-800">Dias de Permanência (Para tabela regressiva de IR):</label>
+          <input type="number" id="cdb-dias-investido" placeholder="Ex: 90, 200, 400 dias" class="w-full border border-amber-300 rounded p-1.5 text-xs bg-white">
+          <span class="text-[10px] text-amber-700 block">Até 180d: 22.5% | 181-360d: 20% | 361-720d: 17.5% | +720d: 15%</span>
+        </div>
+
+        <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded hover:bg-indigo-700 transition text-xs">
+          Salvar Operação
+        </button>
+      </form>
+    </div>
+
+    <!-- TABELA DE HISTÓRICO DE INVESTIMENTOS -->
+    <div class="lg:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+      <h3 class="font-bold text-gray-800 text-sm">Histórico de Movimentações em CDB</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-gray-600">
+          <thead class="bg-white uppercase text-gray-400 border-b">
+            <tr>
+              <th class="p-2">Data</th>
+              <th class="p-2">Título</th>
+              <th class="p-2">Perfil</th>
+              <th class="p-2">Tipo</th>
+              <th class="p-2">Valor</th>
+              <th class="p-2">IR Retido</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-cdb-historico" class="divide-y divide-gray-200">
+            <tr>
+              <td colspan="6" class="p-3 text-center text-gray-400">Carregando movimentações...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
 
   <script>
     function alternarAba(idAba, elementoBotao) {
