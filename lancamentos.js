@@ -159,17 +159,25 @@ async function excluirLancamento(id) {
   }
 }
 
-// 1 e 3. CÁLCULO MÊS ATUAL, TOTAL DEVIDO E TRANSFERÊNCIA ENTRE PESSOAS
+// CÁLCULO MÊS ATUAL, MÊS SEGUINTE E TRANSFERÊNCIA ENTRE PESSOAS
 function atualizarResumoTotais(dados) {
   const agora = new Date();
+  
+  // Chave do Mês Atual (Ex: "2026-09")
   const mesAtualChave = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+  
+  // Chave do Mês Seguinte (Ex: "2026-10")
+  const dataMesSeguinte = new Date(agora.getFullYear(), agora.getMonth() + 1, 1);
+  const mesSeguinteChave = `${dataMesSeguinte.getFullYear()}-${String(dataMesSeguinte.getMonth() + 1).padStart(2, '0')}`;
 
   let totalMesAtual = 0;
   let totalDevidoGeral = 0;
   let pendentesContador = 0;
 
-  // Mapeamento de quanto cada pessoa pagou/assumiu de contas COMPARTILHADAS no mês atual
-  const gastosPorPessoa = {};
+  // Mapeamento de quem pagou/assumiu contas compartilhadas
+  const gastosMesAtual = {};
+  const gastosMesSeguinte = {};
+  let totalMesSeguinte = 0;
 
   dados.forEach(item => {
     const valor = Number(item.amount || 0);
@@ -181,19 +189,26 @@ function atualizarResumoTotais(dados) {
       pendentesContador++;
     }
 
-    // Apenas Contas do MÊS ATUAL
+    // Contas do MÊS ATUAL
     if (itemDataChave === mesAtualChave && item.is_shared) {
       totalMesAtual += valor;
-
-      // Se tiver responsável identificado, acumula
       if (item.profiles?.name) {
         const nomePessoa = item.profiles.name;
-        gastosPorPessoa[nomePessoa] = (gastosPorPessoa[nomePessoa] || 0) + valor;
+        gastosMesAtual[nomePessoa] = (gastosMesAtual[nomePessoa] || 0) + valor;
+      }
+    }
+
+    // Contas do MÊS SEGUINTE
+    if (itemDataChave === mesSeguinteChave && item.is_shared) {
+      totalMesSeguinte += valor;
+      if (item.profiles?.name) {
+        const nomePessoa = item.profiles.name;
+        gastosMesSeguinte[nomePessoa] = (gastosMesSeguinte[nomePessoa] || 0) + valor;
       }
     }
   });
 
-  // Atualizar cards de valores no topo
+  // Atualizar cards do topo
   const elTotalMes = document.getElementById('total-shared');
   const elTotalDevido = document.getElementById('total-devido-geral');
   const elPorPessoa = document.getElementById('total-per-person');
@@ -205,28 +220,37 @@ function atualizarResumoTotais(dados) {
   if (elPorPessoa) elPorPessoa.innerText = `Metade do mês: R$ ${(totalMesAtual / 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   if (elPendentes) elPendentes.innerText = `${pendentesContador} conta(s)`;
 
-  // 3. LÓGICA DE TRANSFERÊNCIA (QUEM DEVE A QUEM)
-  if (elAcertoContainer) {
-    const pessoas = Object.keys(gastosPorPessoa);
-    if (pessoas.length >= 2) {
-      const p1 = pessoas[0];
-      const p2 = pessoas[1];
-      const v1 = gastosPorPessoa[p1] || 0;
-      const v2 = gastosPorPessoa[p2] || 0;
+  // FUNÇÃO AUXILIAR PARA GERAR O TEXTO DE TRANSFERÊNCIA
+  function calcularTextoTransferencia(gastosObj, totalDoMes, prefixoTexto) {
+    const pessoas = Object.keys(gastosObj);
+    if (pessoas.length < 2) return `${prefixoTexto}: Nenhuma conta cadastrada ou sem divisão de 2 pessoas.`;
 
-      const metadeMês = totalMesAtual / 2;
-      const diferenca = Math.abs(v1 - v2) / 2;
+    const p1 = pessoas[0];
+    const p2 = pessoas[1];
+    const v1 = gastosObj[p1] || 0;
+    const v2 = gastosObj[p2] || 0;
+    const diferenca = Math.abs(v1 - v2) / 2;
 
-      if (v1 > v2) {
-        elAcertoContainer.innerHTML = `💡 <b>${p2}</b> deve transferir <b>R$ ${diferenca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b> para <b>${p1}</b> para igualar as contas do mês.`;
-      } else if (v2 > v1) {
-        elAcertoContainer.innerHTML = `💡 <b>${p1}</b> deve transferir <b>R$ ${diferenca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b> para <b>${p2}</b> para igualar as contas do mês.`;
-      } else {
-        elAcertoContainer.innerHTML = `✅ Contas do mês divididas igualmente! Ninguém precisa transferir nada.`;
-      }
+    if (v1 > v2) {
+      return `${prefixoTexto}: <b>${p2}</b> deve transferir <b>R$ ${diferenca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b> para <b>${p1}</b>.`;
+    } else if (v2 > v1) {
+      return `${prefixoTexto}: <b>${p1}</b> deve transferir <b>R$ ${diferenca.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b> para <b>${p2}</b>.`;
     } else {
-      elAcertoContainer.innerHTML = `Aguardando lançamentos vinculados a 2 pessoas para calcular a transferência.`;
+      return `${prefixoTexto}: Contas divididas igualmente! Ninguém precisa transferir.`;
     }
+  }
+
+  // EXIBIÇÃO NO CARD DE TRANSFERÊNCIAS (MÊS ATUAL + MÊS SEGUINTE)
+  if (elAcertoContainer) {
+    const textoAtual = calcularTextoTransferencia(gastosMesAtual, totalMesAtual, "💡 <b>Mês Atual</b>");
+    const textoProximo = calcularTextoTransferencia(gastosMesSeguinte, totalMesSeguinte, "📅 <b>Previsão Mês Seguinte</b>");
+
+    elAcertoContainer.innerHTML = `
+      <div class="space-y-1">
+        <div>${textoAtual}</div>
+        <div class="text-xs text-indigo-700 pt-1 border-t border-indigo-200 mt-1">${textoProximo}</div>
+      </div>
+    `;
   }
 }
 
