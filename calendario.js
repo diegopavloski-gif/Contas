@@ -1,111 +1,140 @@
-// ==========================================
-// MÓDULO DO CALENDÁRIO / PROJEÇÃO 12 MESES
-// ==========================================
-
 async function carregarCalendario12Meses() {
   const container = document.getElementById('grid-calendario');
   if (!container) return;
 
-  container.innerHTML = '<div class="col-span-3 text-center py-4 text-gray-500">Calculando projeção dos próximos 12 meses...</div>';
+  container.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">Carregando projeção dos próximos 6 meses...</div>';
 
-  // 1. Buscar todas as transações no Supabase
-  const { data, error } = await _supabase
-    .from('transactions')
-    .select('*');
+  try {
+    // Busca todas as transações
+    const { data: transacoes, error } = await _supabase
+      .from('transactions')
+      .select('*, categories(name), profiles(name)')
+      .order('due_date', { ascending: true });
 
-  if (error) {
-    console.error('Erro ao buscar lançamentos para o calendário:', error);
-    container.innerHTML = '<div class="col-span-3 text-center text-red-500">Erro ao carregar dados do calendário.</div>';
-    return;
-  }
+    if (error) throw error;
 
-  // 2. Mapear os próximos 12 meses a partir do mês atual
-  const mesesProjeção = [];
-  const hoje = new Date();
+    const agora = new Date();
+    const anoAtual = agora.getFullYear();
+    const mesAtual = agora.getMonth(); // 0-indexed
 
-  for (let i = 0; i < 12; i++) {
-    const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
-    mesesProjeção.push({
-      chave: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-      nomeMes: d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
-      totalCompartilhado: 0,
-      totalGeral: 0,
-      itens: []
-    });
-  }
-
-  // 3. Processar lançamentos mapeando pelo due_date
-  if (data && data.length > 0) {
-    data.forEach(item => {
-      // Utiliza a data de vencimento real do banco (due_date)
-      const dataStr = item.due_date || item.created_at;
-      if (!dataStr) return;
-
-      const partes = dataStr.split('T')[0].split('-');
-      const chaveMes = `${partes[0]}-${partes[1]}`;
-      const valor = Number(item.amount || 0);
-
-      const mesEncontrado = mesesProjeção.find(m => m.chave === chaveMes);
-
-      if (mesEncontrado) {
-        mesEncontrado.totalGeral += valor;
-        if (item.is_shared) {
-          mesEncontrado.totalCompartilhado += valor;
-        }
-        mesEncontrado.itens.push({
-          descricao: item.description || 'Lançamento',
-          valor: valor,
-          isShared: item.is_shared
-        });
-      }
-    });
-  }
-
-  // 4. Renderizar os cards dos 12 meses
-  container.innerHTML = '';
-
-  mesesProjeção.forEach((m, idx) => {
-    const card = document.createElement('div');
-    const valorCompartilhadoPessoa = m.totalCompartilhado / 2;
-
-    card.className = `p-4 rounded-xl border ${idx === 0 ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200'} shadow-sm space-y-2`;
-
-    let htmlItens = '';
-    if (m.itens.length === 0) {
-      htmlItens = '<p class="text-xs text-gray-400 italic">Sem lançamentos previstos</p>';
-    } else {
-      htmlItens = m.itens.map(it => `
-        <div class="flex justify-between items-center text-xs py-1 border-b border-gray-100 last:border-0">
-          <span class="truncate max-w-[150px] text-gray-700" title="${it.descricao}">${it.descricao}</span>
-          <span class="font-medium text-gray-900">R$ ${it.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-        </div>
-      `).join('');
+    // Monta os próximos 6 meses a partir do mês atual
+    const proximosMeses = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(anoAtual, mesAtual + i, 1);
+      proximosMeses.push({
+        ano: d.getFullYear(),
+        mes: d.getMonth(),
+        chave: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+        nomeMes: d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+      });
     }
 
-    card.innerHTML = `
-      <div class="flex justify-between items-center pb-2 border-b border-gray-200">
-        <h4 class="font-bold text-sm text-gray-800 capitalize">${m.nomeMes}</h4>
-        ${idx === 0 ? '<span class="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded-full font-semibold">Mês Atual</span>' : ''}
-      </div>
-      <div class="py-1">
-        <span class="text-xs text-gray-500 block">Total Contas Casa:</span>
-        <span class="text-lg font-extrabold text-gray-900">R$ ${m.totalCompartilhado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-        <span class="text-xs text-indigo-600 font-medium block">R$ ${valorCompartilhadoPessoa.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / pessoa</span>
-      </div>
-      <div class="pt-2 border-t border-gray-100">
-        <p class="text-[11px] font-semibold text-gray-500 mb-1">Detalhamento:</p>
-        <div class="max-h-32 overflow-y-auto pr-1">
-          ${htmlItens}
+    container.innerHTML = '';
+
+    proximosMeses.forEach(m => {
+      // Filtra transações do mês correspondente
+      const itensDoMes = (transacoes || []).filter(item => {
+        if (!item.due_date) return false;
+        return item.due_date.startsWith(m.chave);
+      });
+
+      let totalGeralMes = 0;
+      let totalCompartilhadoMes = 0;
+      const totalPorUsuario = {};
+
+      itensDoMes.forEach(item => {
+        const valor = Number(item.amount || 0);
+        totalGeralMes += valor;
+
+        if (item.is_shared) {
+          totalCompartilhadoMes += valor;
+        }
+
+        const nomePessoa = (item.profiles && item.profiles.name) ? item.profiles.name : 'Outros';
+        totalPorUsuario[nomePessoa] = (totalPorUsuario[nomePessoa] || 0) + valor;
+      });
+
+      // HTML dos lançamentos do mês
+      let listaItensHTML = '';
+      if (itensDoMes.length === 0) {
+        listaItensHTML = '<div class="text-xs text-gray-400 italic py-4 text-center">Nenhum compromisso para este mês.</div>';
+      } else {
+        listaItensHTML = itensDoMes.map(item => {
+          const statusBadge = item.status === 'paid' 
+            ? '<span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-medium">Pago</span>'
+            : '<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">Pendente</span>';
+
+          const nomePessoa = item.profiles?.name ? `(${item.profiles.name})` : '';
+
+          return `
+            <div class="flex justify-between items-center text-xs py-1.5 border-b border-gray-100 last:border-0">
+              <div class="truncate pr-2">
+                <span class="font-medium text-gray-800">${item.description || 'Sem descrição'}</span>
+                <span class="text-[11px] text-gray-400 block">${item.categories?.name || 'Geral'} ${nomePessoa}</span>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <div class="font-semibold text-gray-700">R$ ${Number(item.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                <div class="mt-0.5">${statusBadge}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // HTML do resumo individual por usuário
+      const nomesUsuarios = Object.keys(totalPorUsuario);
+      let resumoUsuariosHTML = '';
+
+      if (nomesUsuarios.length > 0) {
+        resumoUsuariosHTML = nomesUsuarios.map(nome => `
+          <div class="flex justify-between items-center text-xs">
+            <span class="text-gray-600">${nome}:</span>
+            <span class="font-bold text-gray-800">R$ ${totalPorUsuario[nome].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+          </div>
+        `).join('');
+      } else {
+        resumoUsuariosHTML = '<div class="text-xs text-gray-400">Sem lançamentos</div>';
+      }
+
+      // Card do Mês
+      const card = document.createElement('div');
+      card.className = 'bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition';
+      
+      card.innerHTML = `
+        <div>
+          <!-- Cabeçalho do Card -->
+          <div class="flex justify-between items-center pb-3 border-b border-gray-200">
+            <h3 class="font-bold text-gray-800 capitalize text-base">${m.nomeMes}</h3>
+            <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded-full font-bold">
+              ${itensDoMes.length} conta(s)
+            </span>
+          </div>
+
+          <!-- Lista de Transações -->
+          <div class="mt-3 max-h-52 overflow-y-auto pr-1">
+            ${listaItensHTML}
+          </div>
         </div>
-      </div>
-    `;
 
-    container.appendChild(card);
-  });
-}
+        <!-- Rodapé do Card: Totais e Divisão por Usuário -->
+        <div class="pt-3 border-t border-gray-200 space-y-2 bg-gray-50 -mx-4 -mb-4 p-4 rounded-b-xl">
+          <div class="flex justify-between items-center text-xs font-bold text-gray-700">
+            <span>Total Geral do Mês:</span>
+            <span class="text-indigo-600 text-sm">R$ ${totalGeralMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+          </div>
 
-document.addEventListener('DOMContentLoaded', () => {
-  if (typeof carregarCalendario12Meses === 'function') {
-    carregarCalendario12Meses();
+          <div class="pt-2 border-t border-gray-200 space-y-1">
+            <span class="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">Total Individual (Quem assumiu)</span>
+            ${resumoUsuariosHTML}
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+
+  } catch (err) {
+    console.error('Erro ao gerar calendário:', err);
+    container.innerHTML = `<div class="col-span-full text-center text-red-500 py-4">Erro ao carregar calendário: ${err.message || err}</div>`;
   }
-});
+}
