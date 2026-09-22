@@ -17,7 +17,7 @@
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200 gap-4">
       <div>
         <h1 class="text-2xl font-bold text-gray-800">Controle Financeiro Familiar</h1>
-        <p class="text-sm text-gray-500">Gestão de contas compartilhadas e planejamento mensal</p>
+        <p class="text-sm text-gray-500">Gestão de contas compartilhadas, parcelamentos e investimentos</p>
       </div>
       <div id="status-box" class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded text-xs text-amber-700">
         Iniciando conexão...
@@ -53,6 +53,9 @@
       <button onclick="alternarAba('sec-calendario', this)" class="btn-aba pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
         Calendário (12 Meses)
       </button>
+      <button onclick="alternarAba('sec-investimentos', this)" class="btn-aba pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+        Investimentos
+      </button>
     </div>
 
     <!-- CONTEÚDO DAS ABAS -->
@@ -65,11 +68,11 @@
         <form id="form-lancamento" onsubmit="salvarLancamento(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
-            <input type="text" id="lanc-descricao" required placeholder="Ex: Luz, Mercado, Internet" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+            <input type="text" id="lanc-descricao" required placeholder="Ex: Luz, Mercado, Notebook" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
           </div>
           
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Valor (R$)</label>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Valor da Parcela / Total (R$)</label>
             <input type="number" step="0.01" id="lanc-valor" required placeholder="0.00" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
           </div>
           
@@ -103,6 +106,18 @@
             </select>
           </div>
 
+          <!-- PARCELAMENTO -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Parcela Atual</label>
+              <input type="number" id="lanc-parcela-atual" min="1" value="1" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Total Parcelas</label>
+              <input type="number" id="lanc-total-parcelas" min="1" value="1" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Status</label>
             <select id="lanc-status" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
@@ -111,7 +126,7 @@
             </select>
           </div>
 
-          <div class="md:col-span-2 flex items-end">
+          <div class="flex items-end">
             <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded hover:bg-indigo-700 transition">
               Adicionar Apontamento
             </button>
@@ -127,6 +142,7 @@
                 <th class="p-3">Descrição</th>
                 <th class="p-3">Categoria</th>
                 <th class="p-3">Pessoa</th>
+                <th class="p-3">Parcela</th>
                 <th class="p-3">Vencimento</th>
                 <th class="p-3">Valor</th>
                 <th class="p-3">Status</th>
@@ -135,7 +151,7 @@
             </thead>
             <tbody id="tbody-lancamentos" class="divide-y divide-gray-200">
               <tr>
-                <td colspan="7" class="p-3 text-center text-gray-400">Carregando lançamentos...</td>
+                <td colspan="8" class="p-3 text-center text-gray-400">Carregando lançamentos...</td>
               </tr>
             </tbody>
           </table>
@@ -151,6 +167,48 @@
 
         <div id="grid-calendario" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
           <!-- Carregado via JS -->
+        </div>
+      </div>
+
+      <!-- ABA 3: INVESTIMENTOS -->
+      <div id="sec-investimentos" class="tab-content hidden space-y-6">
+        <div>
+          <h2 class="text-lg font-bold text-gray-800">Carteira de Investimentos</h2>
+          <p class="text-xs text-gray-500">Acompanhamento de ativos (Ações B3, FIIs, Renda Fixa e Cripto)</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <span class="text-xs font-semibold text-gray-500 uppercase">Total Aplicado</span>
+            <div id="inv-total" class="text-xl font-bold text-gray-800 mt-1">R$ 0,00</div>
+          </div>
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <span class="text-xs font-semibold text-gray-500 uppercase">Projeção Rendimento Mês</span>
+            <div id="inv-rendimento" class="text-xl font-bold text-emerald-600 mt-1">R$ 0,00</div>
+          </div>
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <span class="text-xs font-semibold text-gray-500 uppercase">Ativos Cadastrados</span>
+            <div id="inv-qtd" class="text-xl font-bold text-indigo-600 mt-1">0 ativos</div>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm text-gray-600">
+            <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+              <tr>
+                <th class="p-3">Ativo / Ticker</th>
+                <th class="p-3">Tipo</th>
+                <th class="p-3">Quantidade</th>
+                <th class="p-3">Preço Médio</th>
+                <th class="p-3">Total Investido</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-investimentos" class="divide-y divide-gray-200">
+              <tr>
+                <td colspan="5" class="p-3 text-center text-gray-400">Nenhum ativo registrado na carteira.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
