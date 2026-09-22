@@ -34,14 +34,17 @@ async function carregarCalendario12Meses() {
     });
   }
 
-  // 3. Processar lançamentos e agrupar por mês
+  // 3. Processar lançamentos mapeando pelo due_date
   if (data && data.length > 0) {
     data.forEach(item => {
-      const dataItem = item.created_at ? new Date(item.created_at) : new Date();
-      const chaveMes = `${dataItem.getFullYear()}-${String(dataItem.getMonth() + 1).padStart(2, '0')}`;
+      // Utiliza a data de vencimento real do banco (due_date)
+      const dataStr = item.due_date || item.created_at;
+      if (!dataStr) return;
+
+      const partes = dataStr.split('T')[0].split('-');
+      const chaveMes = `${partes[0]}-${partes[1]}`;
       const valor = Number(item.amount || 0);
 
-      // Localiza se o lançamento cai em algum dos próximos 12 meses
       const mesEncontrado = mesesProjeção.find(m => m.chave === chaveMes);
 
       if (mesEncontrado) {
@@ -101,9 +104,7 @@ async function carregarCalendario12Meses() {
   });
 }
 
-// Chamar a função sempre que a aba do calendário for exibida
 document.addEventListener('DOMContentLoaded', () => {
-  // Observa mudanças nas abas ou inicializa se for a ativa
   if (typeof carregarCalendario12Meses === 'function') {
     carregarCalendario12Meses();
   }
