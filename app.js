@@ -1,6 +1,6 @@
 // CONFIGURAÇÃO DO SUPABASE
 // Substitua os textos entre aspas com os valores do seu Supabase
-const SUPABASE_URL = "https://yfzurdvlqmdtbkyeglam.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://yfzurdvlqmdtbkyeglam.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlmenVyZHZscW1kdGJreWVnbGFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwODk2NzgsImV4cCI6MjEwNTY2NTY3OH0.xMBnyGmbBFt9NLriCJLQtoKymEWuqE0nEjw8SfhHGZQ";
 
 // Inicializa a conexão com o Supabase
