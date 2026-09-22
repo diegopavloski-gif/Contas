@@ -1,37 +1,37 @@
-// Variable global para armazenar os lançamentos e permitir filtragem rápida
-let todosOsLancamentos = [];
+var todosOsLancamentos = [];
 
 async function carregarLancamentos() {
   const statusBox = document.getElementById('status-box');
-
   if (statusBox) statusBox.innerText = 'Buscando lançamentos no Supabase...';
 
   await carregarOpcoesFormulario();
 
-  const { data, error } = await _supabase
-    .from('transactions')
-    .select('*, categories(name), profiles(name)')
-    .order('due_date', { ascending: false });
+  try {
+    const { data, error } = await _supabase
+      .from('transactions')
+      .select('*, categories(name), profiles(name)')
+      .order('due_date', { ascending: false });
 
-  if (error) {
-    console.error('Erro ao buscar transações:', error);
+    if (error) throw error;
+
     if (statusBox) {
-      statusBox.className = 'bg-red-50 border-l-4 border-red-500 p-4 rounded text-sm text-red-700';
-      statusBox.innerText = 'Erro ao conectar ao banco de dados: ' + error.message;
+      statusBox.className = 'bg-emerald-50 border-l-4 border-emerald-500 p-3 rounded text-xs text-emerald-700';
+      statusBox.innerText = '✅ Conectado ao Supabase com sucesso!';
     }
-    return;
+
+    todosOsLancamentos = data || [];
+
+    preencherOpcoesDeFiltros(todosOsLancamentos);
+    atualizarResumoTotais(todosOsLancamentos);
+    aplicarFiltrosEClassificacao();
+
+  } catch (err) {
+    console.error('Erro ao buscar lançamentos:', err);
+    if (statusBox) {
+      statusBox.className = 'bg-red-50 border-l-4 border-red-500 p-3 rounded text-xs text-red-700';
+      statusBox.innerText = 'Erro: ' + (err.message || err);
+    }
   }
-
-  if (statusBox) {
-    statusBox.className = 'bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded text-sm text-emerald-700';
-    statusBox.innerText = '✅ Conectado ao Supabase com sucesso!';
-  }
-
-  todosOsLancamentos = data || [];
-
-  preencherOpcoesDeFiltros(todosOsLancamentos);
-  atualizarResumoTotais(todosOsLancamentos);
-  aplicarFiltrosEClassificacao();
 }
 
 async function carregarOpcoesFormulario() {
@@ -53,7 +53,6 @@ async function carregarOpcoesFormulario() {
   }
 }
 
-// SALVAMENTO DE APONTAMENTOS E PARCELAS
 async function salvarLancamento(event) {
   event.preventDefault();
 
@@ -77,7 +76,6 @@ async function salvarLancamento(event) {
 
   for (let i = 0; i <= (totalParcelas - parcelaAtualInicial); i++) {
     const numParcela = parcelaAtualInicial + i;
-    
     const dataVencimento = new Date(dataBase.getFullYear(), dataBase.getMonth() + i, dataBase.getDate());
     const ano = dataVencimento.getFullYear();
     const mes = String(dataVencimento.getMonth() + 1).padStart(2, '0');
@@ -98,9 +96,7 @@ async function salvarLancamento(event) {
     });
   }
 
-  const { error } = await _supabase
-    .from('transactions')
-    .insert(novosLancamentos);
+  const { error } = await _supabase.from('transactions').insert(novosLancamentos);
 
   if (error) {
     alert('Erro ao salvar no Supabase: ' + error.message);
@@ -114,10 +110,7 @@ async function salvarLancamento(event) {
 async function excluirLancamento(id) {
   if (!confirm('Deseja excluir este registro?')) return;
 
-  const { error } = await _supabase
-    .from('transactions')
-    .delete()
-    .eq('id', id);
+  const { error } = await _supabase.from('transactions').delete().eq('id', id);
 
   if (error) {
     alert('Erro ao excluir: ' + error.message);
@@ -126,13 +119,11 @@ async function excluirLancamento(id) {
   }
 }
 
-// CÁLCULO MÊS ATUAL, PRÓXIMO MÊS, RESUMO DE PESSOAS E TRANSFERÊNCIAS
 function atualizarResumoTotais(dados) {
   const agora = new Date();
   const anoAtual = agora.getFullYear();
-  const mesAtual = agora.getMonth(); // 0 a 11
+  const mesAtual = agora.getMonth();
 
-  // Cálculo do mês seguinte
   const proximoMesData = new Date(anoAtual, mesAtual + 1, 1);
   const anoProximo = proximoMesData.getFullYear();
   const mesProximo = proximoMesData.getMonth();
@@ -155,24 +146,21 @@ function atualizarResumoTotais(dados) {
     if (item.due_date && item.is_shared) {
       const p = item.due_date.split('-');
       const itemAno = parseInt(p[0]);
-      const itemMes = parseInt(p[1]) - 1; // 0-indexed
+      const itemMes = parseInt(p[1]) - 1;
 
-      const nomePessoa = item.profiles?.name || 'Não Identificado';
+      const nomePessoa = (item.profiles && item.profiles.name) ? item.profiles.name : 'Outros';
 
-      // Mês Atual
       if (itemAno === anoAtual && itemMes === mesAtual) {
         totalMesAtual += valor;
         gastosMesAtual[nomePessoa] = (gastosMesAtual[nomePessoa] || 0) + valor;
       }
 
-      // Próximo Mês
       if (itemAno === anoProximo && itemMes === mesProximo) {
         gastosMesProximo[nomePessoa] = (gastosMesProximo[nomePessoa] || 0) + valor;
       }
     }
   });
 
-  // Atualizar cards topo
   const elTotalMes = document.getElementById('total-shared');
   const elTotalDevido = document.getElementById('total-devido-geral');
   const elPorPessoa = document.getElementById('total-per-person');
@@ -185,7 +173,7 @@ function atualizarResumoTotais(dados) {
   if (elPorPessoa) elPorPessoa.innerText = `Metade do mês: R$ ${(totalMesAtual / 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   if (elPendentes) elPendentes.innerText = `${pendentesContador} conta(s)`;
 
-  // PREENCHER CARD 3: TOTAL POR USUÁRIO NO MÊS
+  // PREENCHE CARD 3
   if (elResumoUsuarios) {
     const nomes = Object.keys(gastosMesAtual);
     if (nomes.length === 0) {
@@ -200,7 +188,7 @@ function atualizarResumoTotais(dados) {
     }
   }
 
-  // GERAR MENSAGENS DE TRANSFERÊNCIA (ATUAL E SEGUINTE)
+  // MENSAGENS DE TRANSFERÊNCIA
   if (elAcertoContainer) {
     const msgAtual = gerarTextoTransferencia(gastosMesAtual, "💡 <b>Mês Atual</b>");
     const msgProxima = gerarTextoTransferencia(gastosMesProximo, "📅 <b>Previsão Próximo Mês</b>");
@@ -235,15 +223,15 @@ function gerarTextoTransferencia(gastosObj, titulo) {
   }
 }
 
-// PREENCHIMENTO DINÂMICO DOS FILTROS DE MÊS E PESSOA
 function preencherOpcoesDeFiltros(dados) {
   const selectMes = document.getElementById('filtro-mes');
   const selectPessoa = document.getElementById('filtro-pessoa');
 
-  if (selectMes && selectMes.options.length <= 1) {
+  if (selectMes) {
+    selectMes.innerHTML = '<option value="todos">Todos os Meses</option>';
     const mesesSet = new Set();
     dados.forEach(d => {
-      if (d.due_date) mesesSet.add(d.due_date.substring(0, 7)); // YYYY-MM
+      if (d.due_date) mesesSet.add(d.due_date.substring(0, 7));
     });
     Array.from(mesesSet).sort().reverse().forEach(m => {
       const p = m.split('-');
@@ -254,10 +242,11 @@ function preencherOpcoesDeFiltros(dados) {
     });
   }
 
-  if (selectPessoa && selectPessoa.options.length <= 1) {
+  if (selectPessoa) {
+    selectPessoa.innerHTML = '<option value="todos">Todas as Pessoas</option>';
     const pessoasSet = new Set();
     dados.forEach(d => {
-      if (d.profiles?.name) pessoasSet.add(d.profiles.name);
+      if (d.profiles && d.profiles.name) pessoasSet.add(d.profiles.name);
     });
     pessoasSet.forEach(p => {
       const opt = document.createElement('option');
@@ -268,31 +257,29 @@ function preencherOpcoesDeFiltros(dados) {
   }
 }
 
-// APLICAÇÃO DOS FILTROS E ORDENAÇÃO
 function aplicarFiltrosEClassificacao() {
   const mesSel = document.getElementById('filtro-mes') ? document.getElementById('filtro-mes').value : 'todos';
   const pessoaSel = document.getElementById('filtro-pessoa') ? document.getElementById('filtro-pessoa').value : 'todos';
   const statusSel = document.getElementById('filtro-status') ? document.getElementById('filtro-status').value : 'todos';
   const ordemSel = document.getElementById('ordenar-por') ? document.getElementById('ordenar-por').value : 'vencimento-desc';
 
-  let filtrados = [...todosOsLancamentos];
+  let filtrados = Array.from(todosOsLancamentos);
 
   if (mesSel !== 'todos') {
     filtrados = filtrados.filter(item => item.due_date && item.due_date.startsWith(mesSel));
   }
 
   if (pessoaSel !== 'todos') {
-    filtrados = filtrados.filter(item => item.profiles?.name === pessoaSel);
+    filtrados = filtrados.filter(item => item.profiles && item.profiles.name === pessoaSel);
   }
 
   if (statusSel !== 'todos') {
     filtrados = filtrados.filter(item => item.status === statusSel);
   }
 
-  // Ordenação
   filtrados.sort((a, b) => {
     if (ordemSel === 'vencimento-desc') return new Date(b.due_date) - new Date(a.due_date);
-    if (ordemSel === 'vencimento-asc') return new Date(a.due_date) - new Date(b.due_date);
+    if (ordemSel === 'vencimento-asc') return new Date(a.due_date) - new Date(a.due_date);
     if (ordemSel === 'valor-desc') return (b.amount || 0) - (a.amount || 0);
     if (ordemSel === 'valor-asc') return (a.amount || 0) - (b.amount || 0);
     return 0;
