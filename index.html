@@ -24,18 +24,18 @@
       </div>
     </header>
 
-    <!-- CARDS DE RESUMO -->
+    <!-- CARDS DE RESUMO E ACERTO DE CONTAS -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Total Compartilhado</span>
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Total Compartilhado (Mês Atual)</span>
         <div id="total-shared" class="text-2xl font-extrabold text-indigo-600 mt-1">R$ 0,00</div>
-        <span id="total-per-person" class="text-xs text-gray-500 mt-1 block">R$ 0,00 por pessoa (50%)</span>
+        <span id="total-per-person" class="text-xs text-gray-500 mt-1 block">Metade do mês: R$ 0,00</span>
       </div>
 
       <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Contas Pendentes</span>
-        <div id="pending-count" class="text-2xl font-extrabold text-amber-500 mt-1">0 conta(s)</div>
-        <span class="text-xs text-gray-500 mt-1 block">Aguardando pagamento</span>
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Total Devido (Pendentes Geral)</span>
+        <div id="total-devido-geral" class="text-2xl font-extrabold text-red-500 mt-1">R$ 0,00</div>
+        <span id="pending-count" class="text-xs text-gray-500 mt-1 block">0 conta(s) pendente(s)</span>
       </div>
 
       <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
@@ -43,6 +43,11 @@
         <div class="text-2xl font-extrabold text-emerald-600 mt-1">12 Meses</div>
         <span class="text-xs text-gray-500 mt-1 block">Visualização no Calendário</span>
       </div>
+    </div>
+
+    <!-- BOX DE TRANSFERÊNCIA DE VALORES ENTRE O CASAL/PESSOAS -->
+    <div id="box-acerto-contas" class="bg-indigo-50 border-l-4 border-indigo-600 p-4 rounded-xl text-sm text-indigo-900 font-medium">
+      Calculando transferência do mês...
     </div>
 
     <!-- NAVEGAÇÃO ENTRE ABAS -->
