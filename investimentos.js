@@ -16,7 +16,6 @@ async function carregarSelectsInvestimentos() {
 
   if (typeof _supabase === 'undefined') return;
 
-  // Carrega Títulos
   if (selectTitulo) {
     let { data: titulos, error } = await _supabase.from('cdb_investments').select('*');
     if ((!titulos || titulos.length === 0) && !error) {
@@ -35,7 +34,6 @@ async function carregarSelectsInvestimentos() {
     }
   }
 
-  // Carrega Perfis
   if (selectPerfil) {
     const { data: perfis } = await _supabase.from('profiles').select('*');
     if (perfis && perfis.length > 0) {
@@ -52,7 +50,7 @@ async function carregarDadosCDB() {
   const { data: transacoes, error } = await _supabase
     .from('cdb_transactions')
     .select('*, cdb_investments(title_name), profiles(name)')
-    .order('transaction_date', { ascending: false });
+    .order('transaction_date', { ascending: true });
 
   if (error) {
     console.error('Erro ao buscar movimentações CDB:', error);
@@ -62,37 +60,50 @@ async function carregarDadosCDB() {
 
   const agora = new Date();
   const anoAtual = agora.getFullYear();
-  const mesChaveAtual = `${anoAtual}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+  const mesAtualStr = `${anoAtual}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
 
-  let totalAcumulado = 0;
+  // Agrupamento de dados por mês (YYYY-MM) para cálculo preciso de saldo congelado
+  const saldoPorMes = {};
+  const aportesPorUsuarioMes = {};
   let rendimentoAno = 0;
   let aporteMesAtual = 0;
 
   (transacoes || []).forEach(item => {
+    if (!item.transaction_date) return;
+    const mesChave = item.transaction_date.substring(0, 7); // Ex: "2026-08"
     const valor = Number(item.amount || 0);
+    const nomePerfil = item.profiles?.name || 'Não identificado';
 
-    if (item.type === 'deposit' || item.type === 'yield') {
-      totalAcumulado += valor;
+    if (!saldoPorMes[mesChave]) saldoPorMes[mesChave] = 0;
+    if (!aportesPorUsuarioMes[mesChave]) aportesPorUsuarioMes[mesChave] = {};
+    if (!aportesPorUsuarioMes[mesChave][nomePerfil]) aportesPorUsuarioMes[mesChave][nomePerfil] = 0;
+
+    // Se for fechamento de mês, CONGELA e DEFINE o saldo daquele mês exatamente como o valor informado
+    if (item.type === 'closing') {
+      saldoPorMes[mesChave] = valor;
+    } else if (item.type === 'deposit') {
+      saldoPorMes[mesChave] += valor;
+      aportesPorUsuarioMes[mesChave][nomePerfil] += valor;
+      if (mesChave === mesAtualStr) aporteMesAtual += valor;
+    } else if (item.type === 'yield') {
+      saldoPorMes[mesChave] += valor;
+      if (item.transaction_date.startsWith(String(anoAtual))) rendimentoAno += valor;
     } else if (item.type === 'withdrawal') {
-      totalAcumulado -= valor;
-    } else if (item.type === 'closing') {
-      // Se for fechamento de mês, consolida o saldo fechado
-      totalAcumulado = valor; 
-    }
-
-    if (item.transaction_date && item.transaction_date.startsWith(String(anoAtual))) {
-      if (item.type === 'yield') rendimentoAno += valor;
-      if (item.type === 'withdrawal') rendimentoAno -= Number(item.ir_discounted || 0);
-    }
-
-    if (item.transaction_date && item.transaction_date.startsWith(mesChaveAtual) && item.type === 'deposit') {
-      aporteMesAtual += valor;
+      saldoPorMes[mesChave] -= valor;
+      if (item.transaction_date.startsWith(String(anoAtual))) rendimentoAno -= Number(item.ir_discounted || 0);
     }
   });
 
-  patrimonioAtualReal = Math.max(0, totalAcumulado);
+  // Calcula o patrimônio acumulado real baseado no último Fechamento / Saldo apurado
+  const mesesOrdenados = Object.keys(saldoPorMes).sort();
+  if (mesesOrdenados.length > 0) {
+    const ultimoMes = mesesOrdenados[mesesOrdenados.length - 1];
+    patrimonioAtualReal = saldoPorMes[ultimoMes];
+  } else {
+    patrimonioAtualReal = 0;
+  }
 
-  // Atualiza indicadores de topo
+  // Atualiza indicadores de tela
   const elTotal = document.getElementById('inv-total-acumulado');
   const elRend = document.getElementById('inv-rendimento-ano');
   const elAporte = document.getElementById('inv-aporte-mes');
@@ -101,8 +112,9 @@ async function carregarDadosCDB() {
   if (elRend) elRend.innerText = `R$ ${rendimentoAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   if (elAporte) elAporte.innerText = `R$ ${aporteMesAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
-  renderizarTabelaCDB(transacoes || []);
-  atualizarSimulacao();
+  // Inverte ordem para exibir os mais recentes no topo da tabela
+  renderizarTabelaCDB([...(transacoes || [])].reverse());
+  atualizarSimulacao(saldoPorMes, aportesPorUsuarioMes);
 }
 
 function alternarCamposOperacao() {
@@ -212,7 +224,7 @@ function renderizarTabelaCDB(dados) {
       <tr>
         <td class="p-2">${new Date(item.transaction_date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
         <td class="p-2 font-medium text-gray-800">${item.cdb_investments?.title_name || '-'}</td>
-        <td class="p-2">${item.profiles?.name || '-'}</td>
+        <td class="p-2 font-semibold text-gray-700">${item.profiles?.name || '-'}</td>
         <td class="p-2">${tipoBadge}</td>
         <td class="p-2 font-semibold">R$ ${Number(item.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
         <td class="p-2 text-red-500">R$ ${Number(item.ir_discounted || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
@@ -225,8 +237,8 @@ function renderizarTabelaCDB(dados) {
   }).join('');
 }
 
-// SIMULADOR & PROJEÇÃO
-function atualizarSimulacao() {
+// PROJEÇÃO HÍBRIDA (HISTÓRICO REAL + PROJEÇÃO FUTURA COM TAGS)
+function atualizarSimulacao(saldoPorMes = {}, aportesPorUsuarioMes = {}) {
   const elMetaDiego = document.getElementById('sim-meta-diego');
   const elMetaGise = document.getElementById('sim-meta-gise');
   const elTaxa = document.getElementById('sim-taxa');
@@ -236,61 +248,73 @@ function atualizarSimulacao() {
 
   const metaDiego = parseFloat(elMetaDiego.value) || 0;
   const metaGise = parseFloat(elMetaGise.value) || 0;
-  const aporteMensalCasal = metaDiego + metaGise;
+  const metaCasalTotal = metaDiego + metaGise;
   const taxaAnual = parseFloat(elTaxa.value) || 0;
-  const totalMeses = parseInt(elMeses.value) || 12;
+  const mesesProjecaoFutura = parseInt(elMeses.value) || 12;
 
-  // Atualiza textos na interface
   document.getElementById('disp-meta-diego').innerText = `R$ ${metaDiego.toLocaleString('pt-BR')}`;
   document.getElementById('disp-meta-gise').innerText = `R$ ${metaGise.toLocaleString('pt-BR')}`;
   document.getElementById('disp-taxa').innerText = `${taxaAnual}%`;
-  document.getElementById('disp-meses').innerText = `${totalMeses} mes(es)`;
+  document.getElementById('disp-meses').innerText = `${mesesProjecaoFutura} mes(es)`;
 
   const elMetaCasal = document.getElementById('inv-meta-casal');
   const elMetaIndiv = document.getElementById('inv-meta-individual');
-  if (elMetaCasal) elMetaCasal.innerText = `R$ ${aporteMensalCasal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  if (elMetaCasal) elMetaCasal.innerText = `R$ ${metaCasalTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   if (elMetaIndiv) elMetaIndiv.innerText = `Diego: R$ ${metaDiego.toLocaleString('pt-BR')} | Gise: R$ ${metaGise.toLocaleString('pt-BR')}`;
 
-  // Calculo de Rendimento Mensal Esperado (Renda Fixa Mês)
   const taxaMensal = Math.pow(1 + (taxaAnual / 100), 1 / 12) - 1;
   const rendimentoMesEsperado = patrimonioAtualReal * taxaMensal;
   const elRendEsperado = document.getElementById('inv-rendimento-esperado-mes');
   if (elRendEsperado) {
-    elRendEsperado.innerText = `R$ ${rendimentoMesEsperado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    elRendEsperado.innerText = `R$ ${rendimentoMesEsperado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   }
 
-  // Monta Labels com Nomes dos Meses Reais
   const mesesNomes = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-  const dataAtual = new Date();
-  let mesAtualIndex = dataAtual.getMonth();
-  let anoAtualIndex = dataAtual.getFullYear();
-
   const labels = [];
-  const dadosAportes = [];
-  const dadosTotalComJuros = [];
+  const dadosEvolucao = [];
+  const tagsDetalhadas = [];
 
-  let montanteComJuros = patrimonioAtualReal;
-  let totalSoAportes = patrimonioAtualReal;
+  // 1. Plota Meses Históricos com Fechamento/Aportes Reais
+  const mesesHistoricos = Object.keys(saldoPorMes).sort();
+  mesesHistoricos.forEach(mChave => {
+    const [ano, mes] = mChave.split('-');
+    const nomeMes = mesesNomes[parseInt(mes, 10) - 1];
+    labels.push(`${nomeMes}/${ano.substring(2)} (Real)`);
+    dadosEvolucao.push(saldoPorMes[mChave]);
 
-  for (let m = 0; m <= totalMeses; m++) {
-    const nomeMes = mesesNomes[(mesAtualIndex + m) % 12];
-    const anoDoMes = anoAtualIndex + Math.floor((mesAtualIndex + m) / 12);
-    labels.push(`${nomeMes}/${String(anoDoMes).substring(2)}`);
+    // Monta a Tag com quem aportou no mês
+    const ap = aportesPorUsuarioMes[mChave] || {};
+    const partesAporte = [];
+    Object.keys(ap).forEach(usr => {
+      if (ap[usr] > 0) partesAporte.push(`${usr}: R$ ${ap[usr].toLocaleString('pt-BR')}`);
+    });
+    const tagTexto = partesAporte.length > 0 ? partesAporte.join(' | ') : 'Sem aportes diretos';
+    tagsDetalhadas.push(tagTexto);
+  });
 
-    dadosAportes.push(Math.round(totalSoAportes));
-    dadosTotalComJuros.push(Math.round(montanteComJuros));
+  // 2. Plota Projeção para os Próximos Meses a partir do Saldo Atual
+  let montanteProjetado = patrimonioAtualReal;
+  const dataRef = new Date();
+  let mIndex = dataRef.getMonth();
+  let aIndex = dataRef.getFullYear();
 
-    montanteComJuros = (montanteComJuros + aporteMensalCasal) * (1 + taxaMensal);
-    totalSoAportes += aporteMensalCasal;
+  for (let i = 1; i <= mesesProjecaoFutura; i++) {
+    const nomeMes = mesesNomes[(mIndex + i) % 12];
+    const anoDoMes = aIndex + Math.floor((mIndex + i) / 12);
+    labels.push(`${nomeMes}/${String(anoDoMes).substring(2)} (Proj)`);
+
+    montanteProjetado = (montanteProjetado + metaCasalTotal) * (1 + taxaMensal);
+    dadosEvolucao.push(Math.round(montanteProjetado));
+    tagsDetalhadas.push(`Projeção Meta: R$ ${metaCasalTotal.toLocaleString('pt-BR')}`);
   }
 
   const elFinal = document.getElementById('sim-valor-final');
-  if (elFinal) elFinal.innerText = `R$ ${Math.round(montanteComJuros).toLocaleString('pt-BR')}`;
+  if (elFinal) elFinal.innerText = `R$ ${Math.round(montanteProjetado).toLocaleString('pt-BR')}`;
 
-  desenharGrafico(labels, dadosAportes, dadosTotalComJuros);
+  desenharGrafico(labels, dadosEvolucao, tagsDetalhadas);
 }
 
-function desenharGrafico(labels, dadosAportes, dadosTotalComJuros) {
+function desenharGrafico(labels, dadosEvolucao, tagsDetalhadas) {
   const ctx = document.getElementById('graficoProjecao');
   if (!ctx || typeof Chart === 'undefined') return;
 
@@ -304,20 +328,15 @@ function desenharGrafico(labels, dadosAportes, dadosTotalComJuros) {
       labels: labels,
       datasets: [
         {
-          label: 'Total Acumulado (Juros + Aportes)',
-          data: dadosTotalComJuros,
+          label: 'Evolução Patrimonial (Real x Projetado)',
+          data: dadosEvolucao,
           borderColor: '#38bdf8',
-          backgroundColor: 'rgba(56, 189, 248, 0.1)',
+          backgroundColor: 'rgba(56, 189, 248, 0.15)',
           fill: true,
-          tension: 0.3
-        },
-        {
-          label: 'Total Aportado',
-          data: dadosAportes,
-          borderColor: '#4ade80',
-          borderDash: [5, 5],
-          fill: false,
-          tension: 0.1
+          tension: 0.2,
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          pointBackgroundColor: '#818cf8'
         }
       ]
     },
@@ -325,10 +344,22 @@ function desenharGrafico(labels, dadosAportes, dadosTotalComJuros) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: '#9ca3af', font: { size: 11 } } }
+        legend: { labels: { color: '#9ca3af', font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const val = context.raw || 0;
+              return ` Patrimônio: R$ ${val.toLocaleString('pt-BR')}`;
+            },
+            afterLabel: function(context) {
+              const index = context.dataIndex;
+              return ` Detalhe: ${tagsDetalhadas[index] || ''}`;
+            }
+          }
+        }
       },
       scales: {
-        x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
+        x: { ticks: { color: '#9ca3af', font: { size: 10 } }, grid: { color: '#374151' } },
         y: { 
           ticks: { 
             color: '#9ca3af',
