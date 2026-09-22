@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestão Financeira Doméstica</title>
+  <title>Controle Financeiro Familiar</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -22,7 +22,7 @@
       </div>
     </header>
 
-    <!-- CARDS DE RESUMO (3º CARD ATUALIZADO PARA RESUMO POR USUÁRIO) -->
+    <!-- CARDS DE RESUMO -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
         <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Total Compartilhado (Mês Atual)</span>
@@ -36,21 +36,21 @@
         <span id="pending-count" class="text-xs text-gray-500 mt-1 block">0 conta(s)</span>
       </div>
 
-      <!-- NOVO CARD: TOTAL PAGO/ASSUMIDO POR CADA USUÁRIO NO MÊS -->
+      <!-- CARD 3: TOTAL POR PESSOA NO MÊS -->
       <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
         <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Contas do Mês por Pessoa</span>
         <div id="resumo-usuarios-mes" class="text-sm font-semibold text-gray-700 mt-2 space-y-1">
-          <div>Carregando...</div>
+          <span class="text-xs text-gray-400">Carregando dados...</span>
         </div>
       </div>
     </div>
 
-    <!-- BOX DE TRANSFERÊNCIA DE VALORES (MÊS ATUAL E PRÓXIMO MÊS) -->
+    <!-- MENSAGENS DE TRANSFERÊNCIA -->
     <div id="box-acerto-contas" class="bg-indigo-50 border-l-4 border-indigo-600 p-4 rounded-xl text-sm text-indigo-900 font-medium">
       Calculando transferências...
     </div>
 
-    <!-- NAVEGAÇÃO ENTRE ABAS -->
+    <!-- NAVEGAÇÃO -->
     <div class="border-b border-gray-200 flex space-x-4">
       <button onclick="alternarAba('sec-lancamentos', this)" class="btn-aba pb-2 border-b-2 border-indigo-600 text-indigo-600 font-bold text-sm">
         Lançamentos
@@ -66,7 +66,7 @@
     <!-- CONTEÚDO DAS ABAS -->
     <main class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
 
-      <!-- ABA 1: LANÇAMENTOS -->
+      <!-- ABA LANÇAMENTOS -->
       <div id="sec-lancamentos" class="tab-content space-y-6">
         <h2 class="text-lg font-bold text-gray-800">Novo Apontamento</h2>
         
@@ -137,12 +137,11 @@
           </div>
         </form>
 
-        <!-- FILTROS E HISTÓRICO DE LANÇAMENTOS -->
+        <!-- FILTROS E TABELA -->
         <div class="pt-6 border-t space-y-4">
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <h3 class="text-md font-bold text-gray-800">Histórico de Lançamentos</h3>
             
-            <!-- ÁREA DE FILTROS -->
             <div class="flex flex-wrap gap-2 w-full md:w-auto">
               <select id="filtro-mes" onchange="aplicarFiltrosEClassificacao()" class="border border-gray-300 rounded p-1.5 text-xs focus:outline-none focus:border-indigo-500">
                 <option value="todos">Todos os Meses</option>
@@ -191,7 +190,7 @@
         </div>
       </div>
 
-      <!-- ABA 2: CALENDÁRIO 12 MESES -->
+      <!-- ABA CALENDÁRIO -->
       <div id="sec-calendario" class="tab-content hidden space-y-4">
         <div>
           <h2 class="text-lg font-bold text-gray-800">Calendário de Projeção (12 Meses)</h2>
@@ -200,7 +199,7 @@
         <div id="grid-calendario" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2"></div>
       </div>
 
-      <!-- ABA 3: INVESTIMENTOS -->
+      <!-- ABA INVESTIMENTOS -->
       <div id="sec-investimentos" class="tab-content hidden space-y-6">
         <div>
           <h2 class="text-lg font-bold text-gray-800">Carteira de Investimentos</h2>
