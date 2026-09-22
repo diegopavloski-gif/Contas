@@ -1,145 +1,162 @@
-// ==========================================
-// MÓDULO DE INVESTIMENTOS E RENDA FIXA
-// ==========================================
+<!-- ABA INVESTIMENTOS -->
+<div id="sec-investimentos" class="tab-content hidden space-y-6">
+  
+  <!-- CARDS DE TOPO -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Patrimônio Atual (CDB)</span>
+      <div id="inv-total-acumulado" class="text-2xl font-extrabold text-gray-800 mt-1">R$ 0,00</div>
+      <span class="text-[11px] text-gray-400">Total alocado</span>
+    </div>
 
-// Função principal de inicialização da aba de investimentos
-async function carregarInvestimentos() {
-    await carregarTabelaInvestimentos();
-    calcularSimulacaoRendaFixa();
-}
+    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Rendimento no Ano</span>
+      <div id="inv-rendimento-ano" class="text-2xl font-extrabold text-emerald-600 mt-1">R$ 0,00</div>
+      <span class="text-[11px] text-emerald-700">Lucro líquido acumulado</span>
+    </div>
 
-// 1. Buscar investimentos salvos no Supabase
-async function carregarTabelaInvestimentos() {
-    const tbody = document.getElementById('tbody-investimentos');
-    if (!tbody) return;
+    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Aporte do Mês Atual</span>
+      <div id="inv-aporte-mes" class="text-2xl font-extrabold text-indigo-600 mt-1">R$ 0,00</div>
+      <span id="inv-progresso-meta" class="text-[11px] text-gray-500">Meta: R$ 0,00</span>
+    </div>
 
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
+    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Meta Mensal do Casal</span>
+      <div id="inv-meta-casal" class="text-2xl font-extrabold text-purple-600 mt-1">R$ 0,00</div>
+      <span id="inv-metas-individuais" class="text-[11px] text-gray-500">Diego: R$ 0 | Gise: R$ 0</span>
+    </div>
+  </div>
 
-    const { data, error } = await _supabase
-        .from('investimentos')
-        .select('*')
-        .order('data_aplicacao', { ascending: false });
+  <!-- SIMULADOR DINÂMICO E GRÁFICO (ESTILO IMAGEM) -->
+  <div class="bg-gray-900 text-white p-6 rounded-2xl shadow-lg space-y-6">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <h3 class="text-lg font-bold">Simulador de Crescimento de Patrimônio</h3>
+        <p class="text-xs text-gray-400">Projeção com juros compostos baseada na taxa do CDB e aportes regulares</p>
+      </div>
+      <div class="text-right">
+        <span class="text-xs text-gray-400 uppercase block">Valor Esperado ao Final</span>
+        <span id="sim-valor-final" class="text-2xl font-extrabold text-emerald-400">R$ 0,00</span>
+      </div>
+    </div>
 
-    if (error) {
-        console.error('Erro ao buscar investimentos:', error);
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
-        return;
-    }
+    <!-- GRÁFICO -->
+    <div class="h-64 w-full">
+      <canvas id="graficoProjecao"></canvas>
+    </div>
 
-    if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum investimento registrado.</td></tr>';
-        return;
-    }
+    <!-- CONTROLES DO SIMULADOR (SLIDERS) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4 border-t border-gray-800 text-xs">
+      <div>
+        <label class="flex justify-between font-semibold text-gray-300 mb-2">
+          <span>Patrimônio Inicial:</span>
+          <span id="disp-patrimonio" class="text-indigo-400 font-bold">R$ 0</span>
+        </label>
+        <input type="range" id="sim-patrimonio" min="0" max="200000" step="1000" value="0" oninput="atualizarSimulacao()" class="w-full accent-indigo-500">
+      </div>
 
-    tbody.innerHTML = '';
-    let totalInvestido = 0;
+      <div>
+        <label class="flex justify-between font-semibold text-gray-300 mb-2">
+          <span>Meta Aporte Mensal:</span>
+          <span id="disp-aporte" class="text-indigo-400 font-bold">R$ 1.500</span>
+        </label>
+        <input type="range" id="sim-aporte" min="0" max="20000" step="250" value="1500" oninput="atualizarSimulacao()" class="w-full accent-indigo-500">
+      </div>
 
-    data.forEach(item => {
-        totalInvestido += Number(item.valor || 0);
-        
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${item.ativo || '-'}</td>
-            <td>${item.tipo || 'Renda Fixa'}</td>
-            <td>${item.taxa_cdi ? item.taxa_cdi + '% do CDI' : '-'}</td>
-            <td>${item.liquidez || 'Diária'}</td>
-            <td>R$ ${Number(item.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-outline-danger" onclick="excluirInvestimento('${item.id}')">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
+      <div>
+        <label class="flex justify-between font-semibold text-gray-300 mb-2">
+          <span>Rendimento (% a.a. do CDI):</span>
+          <span id="disp-taxa" class="text-indigo-400 font-bold">10.5%</span>
+        </label>
+        <input type="range" id="sim-taxa" min="5" max="20" step="0.5" value="10.5" oninput="atualizarSimulacao()" class="w-full accent-indigo-500">
+      </div>
 
-    // Atualiza o card de total
-    const elTotal = document.getElementById('total-investido');
-    if (elTotal) {
-        elTotal.innerText = `R$ ${totalInvestido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-    }
-}
+      <div>
+        <label class="flex justify-between font-semibold text-gray-300 mb-2">
+          <span>Horizonte (Anos):</span>
+          <span id="disp-anos" class="text-indigo-400 font-bold">5 anos</span>
+        </label>
+        <input type="range" id="sim-anos" min="1" max="30" step="1" value="5" oninput="atualizarSimulacao()" class="w-full accent-indigo-500">
+      </div>
+    </div>
+  </div>
 
-// 2. Salvar novo investimento no Supabase
-async function salvarInvestimento(event) {
-    event.preventDefault();
+  <!-- REGISTRO DE APORTES, RENDIMENTOS E RESGATES -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- FORMULÁRIO DE OPERAÇÃO -->
+    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+      <h3 class="font-bold text-gray-800 text-sm">Registrar Operação / Aporte</h3>
+      <form id="form-cdb-operacao" onsubmit="salvarOperacaoCDB(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Título do CDB</label>
+          <select id="cdb-titulo-id" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+            <option value="">Carregando títulos...</option>
+          </select>
+        </div>
 
-    const ativo = document.getElementById('inv-ativo').value;
-    const tipo = document.getElementById('inv-tipo').value;
-    const taxaCdi = parseFloat(document.getElementById('inv-taxa').value) || 0;
-    const liquidez = document.getElementById('inv-liquidez').value;
-    const valor = parseFloat(document.getElementById('inv-valor').value) || 0;
-    const dataAplicacao = document.getElementById('inv-data').value || new Date().toISOString().split('T')[0];
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Quem Investiu / Perfil</label>
+          <select id="cdb-perfil-id" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+            <option value="">Carregando perfis...</option>
+          </select>
+        </div>
 
-    const { error } = await _supabase
-        .from('investimentos')
-        .insert([{ 
-            ativo: ativo, 
-            tipo: tipo, 
-            taxa_cdi: taxaCdi, 
-            liquidez: liquidez, 
-            valor: valor, 
-            data_aplicacao: dataAplicacao 
-        }]);
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Tipo de Operação</label>
+          <select id="cdb-tipo-op" onchange="alternarCamposOperacao()" class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+            <option value="deposit">Aporte (Investir)</option>
+            <option value="yield">Rendimento Fechado do Mês</option>
+            <option value="withdrawal">Resgate (Saque)</option>
+          </select>
+        </div>
 
-    if (error) {
-        alert('Erro ao salvar investimento: ' + error.message);
-        return;
-    }
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Valor (R$)</label>
+          <input type="number" step="0.01" id="cdb-valor" required placeholder="0.00" class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+        </div>
 
-    document.getElementById('form-investimento').reset();
-    carregarTabelaInvestimentos();
-}
+        <div>
+          <label class="block text-xs font-semibold text-gray-600 mb-1">Data da Operação</label>
+          <input type="date" id="cdb-data" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+        </div>
 
-// 3. Excluir investimento
-async function excluirInvestimento(id) {
-    if (!confirm('Deseja realmente remover este ativo?')) return;
+        <!-- CAMPO DE IR EXIBIDO APENAS EM RESGATES -->
+        <div id="box-campo-ir" class="hidden bg-amber-50 p-2.5 rounded border border-amber-200 space-y-1">
+          <label class="block text-[11px] font-semibold text-amber-800">Dias de Permanência para IR:</label>
+          <input type="number" id="cdb-dias-investido" placeholder="Ex: 90, 200, 400 dias" class="w-full border border-amber-300 rounded p-1.5 text-xs">
+          <span class="text-[10px] text-amber-700 block">O cálculo do desconto da tabela regressiva do IR será feito automaticamente.</span>
+        </div>
 
-    const { error } = await _supabase
-        .from('investimentos')
-        .delete()
-        .eq('id', id);
+        <button type="submit" class="w-full bg-indigo-600 text-white text-xs font-bold py-2.5 rounded hover:bg-indigo-700 transition">
+          Salvar Operação
+        </button>
+      </form>
+    </div>
 
-    if (error) {
-        alert('Erro ao excluir: ' + error.message);
-    } else {
-        carregarTabelaInvestimentos();
-    }
-}
+    <!-- TABELA DE HISTÓRICO DE MOVIMENTAÇÕES -->
+    <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+      <h3 class="font-bold text-gray-800 text-sm">Histórico de Rendimentos e Movimentações</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-gray-600">
+          <thead class="bg-gray-50 uppercase text-gray-400 border-b">
+            <tr>
+              <th class="p-2">Data</th>
+              <th class="p-2">Título</th>
+              <th class="p-2">Pessoa</th>
+              <th class="p-2">Tipo</th>
+              <th class="p-2">Valor</th>
+              <th class="p-2">IR Retido</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-cdb-historico" class="divide-y divide-gray-100">
+            <tr>
+              <td colspan="6" class="p-3 text-center text-gray-400">Carregando histórico...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 
-// 4. Simulador de Rentabilidade por Mês (Renda Fixa)
-function calcularSimulacaoRendaFixa() {
-    const aporteInicial = parseFloat(document.getElementById('sim-inicial')?.value) || 0;
-    const aporteMensal = parseFloat(document.getElementById('sim-mensal')?.value) || 0;
-    const percCDI = parseFloat(document.getElementById('sim-cdi')?.value) || 100;
-    const cdiAnual = parseFloat(document.getElementById('sim-cdi-anual')?.value) || 10.75; // Exemplo de taxa CDI
-    const meses = parseInt(document.getElementById('sim-meses')?.value) || 12;
-
-    // CDI mensal aproximado: (1 + cdi_anual)^(1/12) - 1
-    const taxaAnualEfetiva = (cdiAnual * (percCDI / 100)) / 100;
-    const taxaMensal = Math.pow(1 + taxaAnualEfetiva, 1 / 12) - 1;
-
-    let saldoAcumulado = aporteInicial;
-    let totalAportado = aporteInicial;
-    let totalJuros = 0;
-
-    for (let i = 1; i <= meses; i++) {
-        const jurosMes = saldoAcumulado * taxaMensal;
-        saldoAcumulado += jurosMes + aporteMensal;
-        totalAportado += aporteMensal;
-        totalJuros += jurosMes;
-    }
-
-    const elSaldo = document.getElementById('sim-resultado-saldo');
-    const elJuros = document.getElementById('sim-resultado-juros');
-    const elAportado = document.getElementById('sim-resultado-aportado');
-
-    if (elSaldo) elSaldo.innerText = `R$ ${saldoAcumulado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    if (elJuros) elJuros.innerText = `R$ ${totalJuros.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    if (elAportado) elAportado.innerText = `R$ ${totalAportado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-// Disparar o carregamento quando a aba for selecionada ou a página carregar
-document.addEventListener('DOMContentLoaded', () => {
-    carregarInvestimentos();
-});
+</div>
