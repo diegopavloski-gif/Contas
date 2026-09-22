@@ -3,331 +3,248 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestão Financeira do Casal</title>
-  
-  <!-- Tailwind CSS -->
+  <title>Controle Financeiro Familiar</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- Chart.js (Necessário para a calculadora dinâmica de investimentos) -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    /* Estilização customizada para scrollbars e interações */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f1f1;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-gray-100 font-sans text-gray-900 antialiased min-h-screen flex flex-col">
+<body class="bg-gray-100 font-sans text-gray-900 min-h-screen">
 
-  <!-- CABEÇALHO / NAVEGAÇÃO PRINCIPAL -->
-  <header class="bg-white border-b border-gray-200 sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between h-16 items-center">
+  <div class="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+
+    <!-- CABEÇALHO -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200 gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800">Controle Financeiro Familiar</h1>
+        <p class="text-sm text-gray-500">Gestão de contas compartilhadas, parcelamentos e investimentos</p>
+      </div>
+      <div id="status-box" class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded text-xs text-amber-700">
+        Iniciando conexão...
+      </div>
+    </header>
+
+    <!-- CARDS DE RESUMO -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Total Compartilhado (Mês Atual)</span>
+        <div id="total-shared" class="text-2xl font-extrabold text-indigo-600 mt-1">R$ 0,00</div>
+        <span id="total-per-person" class="text-xs text-gray-500 mt-1 block">Metade do mês: R$ 0,00</span>
+      </div>
+
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Total Devido (Pendentes Geral)</span>
+        <div id="total-devido-geral" class="text-2xl font-extrabold text-red-500 mt-1">R$ 0,00</div>
+        <span id="pending-count" class="text-xs text-gray-500 mt-1 block">0 conta(s)</span>
+      </div>
+
+      <!-- CARD 3: TOTAL POR PESSOA NO MÊS -->
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Contas do Mês por Pessoa</span>
+        <div id="resumo-usuarios-mes" class="text-sm font-semibold text-gray-700 mt-2 space-y-1">
+          <span class="text-xs text-gray-400">Carregando dados...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENSAGENS DE TRANSFERÊNCIA -->
+    <div id="box-acerto-contas" class="bg-indigo-50 border-l-4 border-indigo-600 p-4 rounded-xl text-sm text-indigo-900 font-medium">
+      Calculando transferências...
+    </div>
+
+    <!-- NAVEGAÇÃO -->
+    <div class="border-b border-gray-200 flex space-x-4">
+      <button onclick="alternarAba('sec-lancamentos', this)" class="btn-aba pb-2 border-b-2 border-indigo-600 text-indigo-600 font-bold text-sm">
+        Lançamentos
+      </button>
+      <button onclick="alternarAba('sec-calendario', this)" class="btn-aba pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+        Calendário (6 Meses)
+      </button>
+      <button onclick="alternarAba('sec-investimentos', this)" class="btn-aba pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+        Investimentos
+      </button>
+    </div>
+
+    <!-- CONTEÚDO DAS ABAS -->
+    <main class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+
+      <!-- ABA LANÇAMENTOS -->
+      <div id="sec-lancamentos" class="tab-content space-y-6">
+        <h2 class="text-lg font-bold text-gray-800">Novo Apontamento</h2>
         
-        <!-- LOGO E TÍTULO -->
-        <div class="flex items-center space-x-3">
-          <div class="bg-indigo-600 text-white p-2 rounded-lg">
-            <i class="fa-solid fa-wallet text-xl"></i>
-          </div>
+        <form id="form-lancamento" onsubmit="salvarLancamento(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <h1 class="text-base font-bold text-gray-800 leading-tight">Finanças do Casal</h1>
-            <p class="text-xs text-gray-500">Gestão e Planejamento Integrado</p>
-          </div>
-        </div>
-
-        <!-- ABAS DE NAVEGAÇÃO -->
-        <nav class="hidden md:flex space-x-1 border-gray-200" id="nav-abas">
-          <button onclick="trocarAba('sec-dashboard')" id="btn-tab-dashboard" class="tab-btn px-4 py-2 text-xs font-bold rounded-lg text-indigo-600 bg-indigo-50 flex items-center gap-2">
-            <i class="fa-solid fa-chart-pie"></i> Dashboard
-          </button>
-          <button onclick="trocarAba('sec-despesas')" id="btn-tab-despesas" class="tab-btn px-4 py-2 text-xs font-semibold rounded-lg text-gray-600 hover:bg-gray-50 flex items-center gap-2">
-            <i class="fa-solid fa-receipt"></i> Despesas
-          </button>
-          <button onclick="trocarAba('sec-calendario')" id="btn-tab-calendario" class="tab-btn px-4 py-2 text-xs font-semibold rounded-lg text-gray-600 hover:bg-gray-50 flex items-center gap-2">
-            <i class="fa-solid fa-calendar-days"></i> Calendário
-          </button>
-          <button onclick="trocarAba('sec-investimentos')" id="btn-tab-investimentos" class="tab-btn px-4 py-2 text-xs font-semibold rounded-lg text-gray-600 hover:bg-gray-50 flex items-center gap-2">
-            <i class="fa-solid fa-chart-line"></i> Investimentos
-          </button>
-        </nav>
-
-        <!-- SELETOR DE PERFIL / CONFIGURAÇÕES -->
-        <div class="flex items-center space-x-3">
-          <select id="global-perfil-select" onchange="alterarPerfilAtivo()" class="bg-gray-50 border border-gray-300 text-gray-700 text-xs rounded-lg p-2 focus:ring-indigo-500 focus:border-indigo-500 font-medium">
-            <option value="todos">Visão do Casal</option>
-            <option value="diego">Diego</option>
-            <option value="gise">Gise</option>
-          </select>
-        </div>
-
-      </div>
-    </div>
-  </header>
-
-  <!-- CONTEÚDO PRINCIPAL (CONTAINER) -->
-  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
-    <!-- 1. ABA DASHBOARD (RESUMO) -->
-    <div id="sec-dashboard" class="tab-content space-y-6">
-      <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-        <h2 class="text-lg font-bold text-gray-800 mb-2">Visão Geral das Finanças</h2>
-        <p class="text-xs text-gray-500">Acompanhamento consolidado dos orçamentos, contas pendentes do mês e investimentos.</p>
-      </div>
-    </div>
-
-    <!-- 2. ABA DESPESAS -->
-    <div id="sec-despesas" class="tab-content hidden space-y-6">
-      <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-        <h2 class="text-lg font-bold text-gray-800 mb-2">Lançamento e Controle de Despesas</h2>
-        <p class="text-xs text-gray-500">Registre os gastos divididos entre o casal ou individuais.</p>
-      </div>
-    </div>
-
-    <!-- 3. ABA CALENDÁRIO -->
-    <div id="sec-calendario" class="tab-content hidden space-y-6">
-      <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-        <h2 class="text-lg font-bold text-gray-800 mb-2">Calendário de Vencimentos</h2>
-        <p class="text-xs text-gray-500">Visualização em grade dos pagamentos programados.</p>
-      </div>
-    </div>
-
-    <!-- 4. ABA INVESTIMENTOS (RENDA FIXA / CDB) -->
-    <div id="sec-investimentos" class="tab-content hidden space-y-6">
-      
-      <!-- PAINEL DE CARDS COM INDICADORES DE DESEMPENHO -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Patrimônio Acumulado (CDB)</span>
-          <div id="inv-total-acumulado" class="text-2xl font-extrabold text-gray-800 mt-1">R$ 0,00</div>
-          <span class="text-[11px] text-gray-400">Total alocado líquido</span>
-        </div>
-
-        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Rendimento no Ano Corrente</span>
-          <div id="inv-rendimento-ano" class="text-2xl font-extrabold text-emerald-600 mt-1">R$ 0,00</div>
-          <span class="text-[11px] text-emerald-700">Lucro acumulado do ano</span>
-        </div>
-
-        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Aporte do Mês Atual</span>
-          <div id="inv-aporte-mes" class="text-2xl font-extrabold text-indigo-600 mt-1">R$ 0,00</div>
-          <span id="inv-progresso-meta" class="text-[11px] text-gray-500">Aportes registrados</span>
-        </div>
-
-        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Meta Mensal de Aporte</span>
-          <div id="inv-meta-casal" class="text-2xl font-extrabold text-purple-600 mt-1">R$ 0,00</div>
-          <span id="inv-metas-individuais" class="text-[11px] text-gray-500">Configurada na simulação</span>
-        </div>
-      </div>
-
-      <!-- SIMULADOR DINÂMICO E GRÁFICO DE JUROS COMPOSTOS (ESTILO DASHBOARD DARK) -->
-      <div class="bg-gray-900 text-white p-6 rounded-2xl shadow-lg space-y-6">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h3 class="text-lg font-bold flex items-center gap-2">
-              <i class="fa-solid fa-calculator text-indigo-400"></i> Calculadora & Projeção Dinâmica
-            </h3>
-            <p class="text-xs text-gray-400">Simule a evolução do patrimônio com base nos aportes regulares e na taxa do CDI</p>
-          </div>
-          <div class="bg-gray-800/80 px-4 py-2 rounded-xl border border-gray-700 text-right">
-            <span class="text-[10px] text-gray-400 uppercase tracking-wider block">Valor Esperado ao Final</span>
-            <span id="sim-valor-final" class="text-2xl font-extrabold text-emerald-400">R$ 0,00</span>
-          </div>
-        </div>
-
-        <!-- GRÁFICO CHART.JS -->
-        <div class="h-64 w-full relative">
-          <canvas id="graficoProjecao"></canvas>
-        </div>
-
-        <!-- CONTROLES INTERATIVOS (SLIDERS) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 pt-4 border-t border-gray-800 text-xs">
-          <div>
-            <label class="flex justify-between font-semibold text-gray-300 mb-2">
-              <span>Patrimônio Inicial (R$):</span>
-              <span id="disp-patrimonio" class="text-indigo-400 font-bold">R$ 0</span>
-            </label>
-            <input type="range" id="sim-patrimonio" min="0" max="300000" step="1000" value="0" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
-          </div>
-
-          <div>
-            <label class="flex justify-between font-semibold text-gray-300 mb-2">
-              <span>Meta Aporte Mensal (R$):</span>
-              <span id="disp-aporte" class="text-indigo-400 font-bold">R$ 1.500</span>
-            </label>
-            <input type="range" id="sim-aporte" min="0" max="20000" step="250" value="1500" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
-          </div>
-
-          <div>
-            <label class="flex justify-between font-semibold text-gray-300 mb-2">
-              <span>Retorno Esperado (% a.a.):</span>
-              <span id="disp-taxa" class="text-indigo-400 font-bold">10.5%</span>
-            </label>
-            <input type="range" id="sim-taxa" min="5" max="20" step="0.5" value="10.5" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
-          </div>
-
-          <div>
-            <label class="flex justify-between font-semibold text-gray-300 mb-2">
-              <span>Horizonte de Tempo:</span>
-              <span id="disp-anos" class="text-indigo-400 font-bold">5 anos</span>
-            </label>
-            <input type="range" id="sim-anos" min="1" max="30" step="1" value="5" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
-          </div>
-        </div>
-      </div>
-
-      <!-- REGISTRO DE MOVIMENTAÇÕES E TABELA DE HISTÓRICO -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- FORMULÁRIO DE OPERAÇÃO DO CDB -->
-        <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
-          <div class="flex items-center justify-between border-b pb-3">
-            <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
-              <i class="fa-solid fa-plus-circle text-indigo-600"></i> Registrar Movimentação
-            </h3>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
+            <input type="text" id="lanc-descricao" required placeholder="Ex: Luz, Mercado, Notebook" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
           </div>
           
-          <form id="form-cdb-operacao" onsubmit="salvarOperacaoCDB(event)" class="space-y-3">
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 mb-1">Título do CDB</label>
-              <select id="cdb-titulo-id" required class="w-full border border-gray-300 rounded-lg p-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="">Carregando títulos...</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 mb-1">Quem Investiu / Titular</label>
-              <select id="cdb-perfil-id" required class="w-full border border-gray-300 rounded-lg p-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="">Carregando perfis...</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 mb-1">Tipo de Operação</label>
-              <select id="cdb-tipo-op" onchange="alternarCamposOperacao()" class="w-full border border-gray-300 rounded-lg p-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="deposit">Aporte (Investir Novo Valor)</option>
-                <option value="yield">Rendimento Fechado do Mês</option>
-                <option value="withdrawal">Resgate / Saque (Com tributação IR)</option>
-              </select>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 mb-1">Valor da Operação (R$)</label>
-              <input type="number" step="0.01" id="cdb-valor" required placeholder="0,00" class="w-full border border-gray-300 rounded-lg p-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-gray-600 mb-1">Data da Operação</label>
-              <input type="date" id="cdb-data" required class="w-full border border-gray-300 rounded-lg p-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            </div>
-
-            <!-- CAMPO ESPECÍFICO EXIBIDO APENAS EM CASO DE RESGATE DE VALORES -->
-            <div id="box-campo-ir" class="hidden bg-amber-50 p-3 rounded-lg border border-amber-200 space-y-2">
-              <label class="block text-[11px] font-bold text-amber-900">Dias de Permanência do Aporte (Para Tabela de IR):</label>
-              <input type="number" id="cdb-dias-investido" placeholder="Ex: 90, 200, 400 dias" class="w-full border border-amber-300 rounded p-1.5 text-xs bg-white">
-              <div class="text-[10px] text-amber-800 space-y-0.5">
-                <p>• Até 180 dias: 22.5% de IR sobre o lucro</p>
-                <p>• 181 a 360 dias: 20.0% | 361 a 720 dias: 17.5%</p>
-                <p>• Acima de 720 dias: 15.0% de IR</p>
-              </div>
-            </div>
-
-            <button type="submit" class="w-full bg-indigo-600 text-white text-xs font-bold py-2.5 rounded-lg hover:bg-indigo-700 transition shadow-sm">
-              Confirmar e Salvar
-            </button>
-          </form>
-        </div>
-
-        <!-- HISTÓRICO DE MOVIMENTAÇÕES -->
-        <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
-          <div class="flex items-center justify-between border-b pb-3">
-            <h3 class="font-bold text-gray-800 text-sm flex items-center gap-2">
-              <i class="fa-solid fa-clock-rotate-left text-gray-500"></i> Histórico de Registros e Rendimentos
-            </h3>
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Valor da Parcela / Total (R$)</label>
+            <input type="number" step="0.01" id="lanc-valor" required placeholder="0.00" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+          </div>
+          
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Data Vencimento</label>
+            <input type="date" id="lanc-data" required class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+          </div>
+          
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Categoria</label>
+            <select id="lanc-categoria" required class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+              <option value="">Carregando categorias...</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Quem Pagou / Perfil</label>
+            <select id="lanc-pessoa" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+              <option value="">Carregando perfis...</option>
+            </select>
           </div>
 
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Forma de Pagamento</label>
+            <select id="lanc-pagamento" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+              <option value="pix">PIX</option>
+              <option value="boleto">Boleto</option>
+              <option value="credit_card">Cartão de Crédito</option>
+              <option value="debit_card">Cartão de Débito</option>
+              <option value="cash">Dinheiro</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Parcela Atual</label>
+              <input type="number" id="lanc-parcela-atual" min="1" value="1" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-600 mb-1">Total Parcelas</label>
+              <input type="number" id="lanc-total-parcelas" min="1" value="1" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Status</label>
+            <select id="lanc-status" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+              <option value="pending">Pendente</option>
+              <option value="paid">Pago</option>
+            </select>
+          </div>
+
+          <div class="flex items-end">
+            <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded hover:bg-indigo-700 transition">
+              Adicionar Apontamento
+            </button>
+          </div>
+        </form>
+
+        <!-- FILTROS E TABELA -->
+        <div class="pt-6 border-t space-y-4">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h3 class="text-md font-bold text-gray-800">Histórico de Lançamentos</h3>
+            
+            <div class="flex flex-wrap gap-2 w-full md:w-auto">
+              <select id="filtro-mes" onchange="aplicarFiltrosEClassificacao()" class="border border-gray-300 rounded p-1.5 text-xs focus:outline-none focus:border-indigo-500">
+                <option value="todos">Todos os Meses</option>
+              </select>
+
+              <select id="filtro-pessoa" onchange="aplicarFiltrosEClassificacao()" class="border border-gray-300 rounded p-1.5 text-xs focus:outline-none focus:border-indigo-500">
+                <option value="todos">Todas as Pessoas</option>
+              </select>
+
+              <select id="filtro-status" onchange="aplicarFiltrosEClassificacao()" class="border border-gray-300 rounded p-1.5 text-xs focus:outline-none focus:border-indigo-500">
+                <option value="todos">Todos os Status</option>
+                <option value="pending">Pendente</option>
+                <option value="paid">Pago</option>
+              </select>
+
+              <select id="ordenar-por" onchange="aplicarFiltrosEClassificacao()" class="border border-gray-300 rounded p-1.5 text-xs bg-gray-50 focus:outline-none focus:border-indigo-500 font-medium">
+                <option value="vencimento-desc">Vencimento (Mais Recentes)</option>
+                <option value="vencimento-asc">Vencimento (Mais Antigos)</option>
+                <option value="valor-desc">Valor (Maior -> Menor)</option>
+                <option value="valor-asc">Valor (Menor -> Maior)</option>
+              </select>
+            </div>
+          </div>
+          
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs text-gray-600">
-              <thead class="bg-gray-50 uppercase text-[10px] font-bold text-gray-400 border-b">
+            <table class="w-full text-left text-sm text-gray-600">
+              <thead class="bg-gray-50 text-xs uppercase text-gray-500">
                 <tr>
-                  <th class="p-2.5">Data</th>
-                  <th class="p-2.5">Título</th>
-                  <th class="p-2.5">Titular</th>
-                  <th class="p-2.5">Tipo</th>
-                  <th class="p-2.5">Valor</th>
-                  <th class="p-2.5">IR Retido</th>
+                  <th class="p-3">Descrição</th>
+                  <th class="p-3">Categoria</th>
+                  <th class="p-3">Pessoa</th>
+                  <th class="p-3">Parcela</th>
+                  <th class="p-3">Vencimento</th>
+                  <th class="p-3">Valor</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3 text-center">Ações</th>
                 </tr>
               </thead>
-              <tbody id="tbody-cdb-historico" class="divide-y divide-gray-100">
+              <tbody id="tbody-lancamentos" class="divide-y divide-gray-200">
                 <tr>
-                  <td colspan="6" class="p-4 text-center text-gray-400">Carregando histórico de aportes...</td>
+                  <td colspan="8" class="p-3 text-center text-gray-400">Carregando lançamentos...</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
-
       </div>
 
-    </div>
+      <!-- ABA CALENDÁRIO -->
+      <div id="sec-calendario" class="tab-content hidden space-y-4">
+        <div>
+          <h2 class="text-lg font-bold text-gray-800">Calendário de Projeção (6 Meses)</h2>
+          <p class="text-xs text-gray-500">Acompanhamento mês a mês dos compromissos financeiros cadastrados</p>
+        </div>
+        <div id="grid-calendario" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2"></div>
+      </div>
 
-  </main>
+      <!-- ABA INVESTIMENTOS -->
+      <div id="sec-investimentos" class="tab-content hidden space-y-6">
+        <div>
+          <h2 class="text-lg font-bold text-gray-800">Carteira de Investimentos</h2>
+          <p class="text-xs text-gray-500">Acompanhamento de ativos (Ações B3, FIIs, Renda Fixa e Cripto)</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <span class="text-xs font-semibold text-gray-500 uppercase">Total Aplicado</span>
+            <div id="inv-total" class="text-xl font-bold text-gray-800 mt-1">R$ 0,00</div>
+          </div>
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <span class="text-xs font-semibold text-gray-500 uppercase">Projeção Rendimento Mês</span>
+            <div id="inv-rendimento" class="text-xl font-bold text-emerald-600 mt-1">R$ 0,00</div>
+          </div>
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <span class="text-xs font-semibold text-gray-500 uppercase">Ativos Cadastrados</span>
+            <div id="inv-qtd" class="text-xl font-bold text-indigo-600 mt-1">0 ativos</div>
+          </div>
+        </div>
+      </div>
 
-  <!-- RODAPÉ -->
-  <footer class="bg-white border-t border-gray-200 py-4 mt-auto">
-    <div class="max-w-7xl mx-auto px-4 text-center text-xs text-gray-400">
-      Sistema de Gestão Financeira Pessoal &bull; Todos os dados sincronizados via Supabase
-    </div>
-  </footer>
+    </main>
+  </div>
 
-  <!-- LÓGICA DAS ABAS NAVEGÁVEIS -->
   <script>
-    function trocarAba(idAba) {
-      // Oculta todos os conteúdos das abas
+    function alternarAba(idAba, elementoBotao) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(idAba).classList.remove('hidden');
 
-      // Reseta estilos de todos os botões de navegação
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('text-indigo-600', 'bg-indigo-50', 'font-bold');
-        btn.classList.add('text-gray-600', 'font-semibold');
+      document.querySelectorAll('.btn-aba').forEach(btn => {
+        btn.classList.remove('border-indigo-600', 'text-indigo-600', 'font-bold');
+        btn.classList.add('border-transparent', 'text-gray-500', 'font-medium');
       });
 
-      // Exibe a aba selecionada
-      const abaAtiva = document.getElementById(idAba);
-      if (abaAtiva) abaAtiva.classList.remove('hidden');
+      elementoBotao.classList.remove('border-transparent', 'text-gray-500', 'font-medium');
+      elementoBotao.classList.add('border-indigo-600', 'text-indigo-600', 'font-bold');
 
-      // Aplica estilo no botão da aba ativa
-      const btnAtivo = document.getElementById('btn-tab-' + idAba.replace('sec-', ''));
-      if (btnAtivo) {
-        btnAtivo.classList.add('text-indigo-600', 'bg-indigo-50', 'font-bold');
-        btnAtivo.classList.remove('text-gray-600');
-      }
-
-      // Executa carregamentos específicos ao trocar de aba
-      if (idAba === 'sec-investimentos' && typeof carregarInvestimentos === 'function') {
-        carregarInvestimentos();
+      if (idAba === 'sec-calendario' && typeof carregarCalendario12Meses === 'function') {
+        carregarCalendario12Meses();
       }
     }
   </script>
 
-  <!-- SCRIPTS DA APLICAÇÃO (SUBSTITUA PELO SEU SCRIPT DO SUPABASE E INVESTIMENTOS) -->
-  <script src="investimentos.js"></script>
-
+  <script src="supabase-config.js"></script>
+  <script src="lancamentos.js"></script>
+  <script src="calendario.js"></script>
 </body>
 </html>
