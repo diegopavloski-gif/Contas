@@ -248,6 +248,34 @@
         carregarInvestimentos();
       }
     }
+    
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(el => {
+        el.classList.remove('border-indigo-600', 'text-indigo-600');
+        el.classList.add('border-transparent', 'text-gray-500');
+      });
+
+      const activeSec = document.getElementById(`sec-${tabName}`);
+      const activeBtn = document.getElementById(`tab-${tabName}`);
+
+      if (activeSec) activeSec.classList.remove('hidden');
+      if (activeBtn) {
+        activeBtn.classList.remove('border-transparent', 'text-gray-500');
+        activeBtn.classList.add('border-indigo-600', 'text-indigo-600');
+      }
+
+  // Gatilhos de carregamento ao trocar de aba
+      if (tabName === 'investimentos' && typeof carregarInvestimentos === 'function') {
+        carregarInvestimentos();
+      }
+      if (tabName === 'calendario' && typeof carregarCalendario12Meses === 'function') {
+        carregarCalendario12Meses();
+      }
+      if (tabName === 'lancamentos' && typeof carregarLancamentos === 'function') {
+        carregarLancamentos();
+      }
+  }
   </script>
 
   <!-- ARQUIVOS JS SEPARADOS DO PROJETO -->
