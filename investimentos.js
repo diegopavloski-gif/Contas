@@ -1,145 +1,119 @@
 // ==========================================
-// MÓDULO DE INVESTIMENTOS E RENDA FIXA
+// MÓDULO DE LANÇAMENTOS E APONTAMENTOS DIÁRIOS
 // ==========================================
 
-// Função principal de inicialização da aba de investimentos
-async function carregarInvestimentos() {
-    await carregarTabelaInvestimentos();
-    calcularSimulacaoRendaFixa();
+async function carregarLancamentos() {
+  const statusBox = document.getElementById('status-box');
+  const tbody = document.getElementById('tbody-lancamentos');
+
+  if (statusBox) statusBox.innerText = 'Buscando lançamentos no Supabase...';
+
+  const { data, error } = await _supabase
+    .from('transactions')
+    .select('*');
+
+  if (error) {
+    console.error('Erro ao buscar transações:', error);
+    if (statusBox) {
+      statusBox.className = 'bg-red-50 border-l-4 border-red-500 p-4 rounded text-sm text-red-700';
+      statusBox.innerText = 'Erro ao conectar ao banco de dados: ' + error.message;
+    }
+    return;
+  }
+
+  if (statusBox) {
+    statusBox.className = 'bg-emerald-50 border-l-4 border-emerald-500 p-4 rounded text-sm text-emerald-700';
+    statusBox.innerText = '✅ Conectado ao Supabase com sucesso!';
+  }
+
+  if (!tbody) return;
+
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="p-3 text-center text-gray-400">Nenhum lançamento encontrado.</td></tr>';
+    atualizarResumoTotais([]);
+    return;
+  }
+
+  tbody.innerHTML = '';
+  data.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="p-3 font-medium">${item.description || '-'}</td>
+      <td class="p-3">${item.is_shared ? 'Compartilhada (50%)' : 'Pessoal'}</td>
+      <td class="p-3">${item.created_at ? new Date(item.created_at).toLocaleDateString('pt-BR') : '-'}</td>
+      <td class="p-3 font-semibold">R$ ${Number(item.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+      <td class="p-3"><span class="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded">Registrado</span></td>
+      <td class="p-3 text-center">
+        <button onclick="excluirLancamento('${item.id}')" class="text-red-500 hover:text-red-700 font-bold">Excluir</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  atualizarResumoTotais(data);
 }
 
-// 1. Buscar investimentos salvos no Supabase
-async function carregarTabelaInvestimentos() {
-    const tbody = document.getElementById('tbody-investimentos');
-    if (!tbody) return;
+// Salvar Lançamento ajustado para as colunas do seu banco
+async function salvarLancamento(event) {
+  event.preventDefault();
 
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Carregando...</td></tr>';
+  const descricao = document.getElementById('lanc-descricao').value;
+  const valor = parseFloat(document.getElementById('lanc-valor').value) || 0;
+  const categoriaSelect = document.getElementById('lanc-categoria').value;
+  const isShared = categoriaSelect === 'Casa Compartilhada';
 
-    const { data, error } = await _supabase
-        .from('investimentos')
-        .select('*')
-        .order('data_aplicacao', { ascending: false });
+  const { error } = await _supabase
+    .from('transactions')
+    .insert([{
+      description: descricao,
+      amount: valor,
+      is_shared: isShared,
+      payment_method: 'credit_card'
+    }]);
 
-    if (error) {
-        console.error('Erro ao buscar investimentos:', error);
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar dados.</td></tr>';
-        return;
-    }
+  if (error) {
+    alert('Erro ao salvar no Supabase: ' + error.message);
+    return;
+  }
 
-    if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhum investimento registrado.</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = '';
-    let totalInvestido = 0;
-
-    data.forEach(item => {
-        totalInvestido += Number(item.valor || 0);
-        
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${item.ativo || '-'}</td>
-            <td>${item.tipo || 'Renda Fixa'}</td>
-            <td>${item.taxa_cdi ? item.taxa_cdi + '% do CDI' : '-'}</td>
-            <td>${item.liquidez || 'Diária'}</td>
-            <td>R$ ${Number(item.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-outline-danger" onclick="excluirInvestimento('${item.id}')">
-                    <i class="bi bi-trash"></i>
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
-
-    // Atualiza o card de total
-    const elTotal = document.getElementById('total-investido');
-    if (elTotal) {
-        elTotal.innerText = `R$ ${totalInvestido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-    }
+  document.getElementById('form-lancamento').reset();
+  carregarLancamentos();
 }
 
-// 2. Salvar novo investimento no Supabase
-async function salvarInvestimento(event) {
-    event.preventDefault();
+// Excluir Lançamento
+async function excluirLancamento(id) {
+  if (!confirm('Deseja excluir este registro?')) return;
 
-    const ativo = document.getElementById('inv-ativo').value;
-    const tipo = document.getElementById('inv-tipo').value;
-    const taxaCdi = parseFloat(document.getElementById('inv-taxa').value) || 0;
-    const liquidez = document.getElementById('inv-liquidez').value;
-    const valor = parseFloat(document.getElementById('inv-valor').value) || 0;
-    const dataAplicacao = document.getElementById('inv-data').value || new Date().toISOString().split('T')[0];
+  const { error } = await _supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id);
 
-    const { error } = await _supabase
-        .from('investimentos')
-        .insert([{ 
-            ativo: ativo, 
-            tipo: tipo, 
-            taxa_cdi: taxaCdi, 
-            liquidez: liquidez, 
-            valor: valor, 
-            data_aplicacao: dataAplicacao 
-        }]);
-
-    if (error) {
-        alert('Erro ao salvar investimento: ' + error.message);
-        return;
-    }
-
-    document.getElementById('form-investimento').reset();
-    carregarTabelaInvestimentos();
+  if (error) {
+    alert('Erro ao excluir: ' + error.message);
+  } else {
+    carregarLancamentos();
+  }
 }
 
-// 3. Excluir investimento
-async function excluirInvestimento(id) {
-    if (!confirm('Deseja realmente remover este ativo?')) return;
-
-    const { error } = await _supabase
-        .from('investimentos')
-        .delete()
-        .eq('id', id);
-
-    if (error) {
-        alert('Erro ao excluir: ' + error.message);
-    } else {
-        carregarTabelaInvestimentos();
+// Atualizar os três cards do topo
+function atualizarResumoTotais(dados) {
+  let totalCompartilhado = 0;
+  
+  dados.forEach(item => {
+    if (item.is_shared) {
+      totalCompartilhado += Number(item.amount || 0);
     }
+  });
+
+  const elTotal = document.getElementById('total-shared');
+  const elPorPessoa = document.getElementById('total-per-person');
+
+  if (elTotal) elTotal.innerText = `R$ ${totalCompartilhado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+  if (elPorPessoa) elPorPessoa.innerText = `R$ ${(totalCompartilhado / 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} por pessoa (50%)`;
 }
 
-// 4. Simulador de Rentabilidade por Mês (Renda Fixa)
-function calcularSimulacaoRendaFixa() {
-    const aporteInicial = parseFloat(document.getElementById('sim-inicial')?.value) || 0;
-    const aporteMensal = parseFloat(document.getElementById('sim-mensal')?.value) || 0;
-    const percCDI = parseFloat(document.getElementById('sim-cdi')?.value) || 100;
-    const cdiAnual = parseFloat(document.getElementById('sim-cdi-anual')?.value) || 10.75; // Exemplo de taxa CDI
-    const meses = parseInt(document.getElementById('sim-meses')?.value) || 12;
-
-    // CDI mensal aproximado: (1 + cdi_anual)^(1/12) - 1
-    const taxaAnualEfetiva = (cdiAnual * (percCDI / 100)) / 100;
-    const taxaMensal = Math.pow(1 + taxaAnualEfetiva, 1 / 12) - 1;
-
-    let saldoAcumulado = aporteInicial;
-    let totalAportado = aporteInicial;
-    let totalJuros = 0;
-
-    for (let i = 1; i <= meses; i++) {
-        const jurosMes = saldoAcumulado * taxaMensal;
-        saldoAcumulado += jurosMes + aporteMensal;
-        totalAportado += aporteMensal;
-        totalJuros += jurosMes;
-    }
-
-    const elSaldo = document.getElementById('sim-resultado-saldo');
-    const elJuros = document.getElementById('sim-resultado-juros');
-    const elAportado = document.getElementById('sim-resultado-aportado');
-
-    if (elSaldo) elSaldo.innerText = `R$ ${saldoAcumulado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    if (elJuros) elJuros.innerText = `R$ ${totalJuros.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    if (elAportado) elAportado.innerText = `R$ ${totalAportado.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
-// Disparar o carregamento quando a aba for selecionada ou a página carregar
+// Inicializar na carga da página
 document.addEventListener('DOMContentLoaded', () => {
-    carregarInvestimentos();
+  carregarLancamentos();
 });
