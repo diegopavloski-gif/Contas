@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const statusBox = document.getElementById("status-box");
   
   try {
-    // Carrega perfis e categorias iniciais
     const { data: profData, error: profErr } = await _supabase.from("profiles").select("*");
     if (profErr) throw profErr;
     profiles = profData || [];
@@ -24,7 +23,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     statusBox.className = "bg-emerald-50 border-l-4 border-emerald-500 p-3 rounded text-sm text-emerald-800 font-medium";
     statusBox.innerHTML = "✅ Conectado ao Supabase com sucesso!";
     
-    // Inicia na aba de lançamentos
     switchTab('lancamentos');
   } catch (err) {
     statusBox.className = "bg-rose-50 border-l-4 border-rose-500 p-3 rounded text-sm text-rose-800";
@@ -141,11 +139,9 @@ async function renderLancamentosTab() {
     </div>
   `;
 
-  // Carrega os lançamentos salva
   fetchTransactions();
 }
 
-// Buscar apontamentos no Supabase
 async function fetchTransactions() {
   const container = document.getElementById("transactions-list-container");
   
@@ -173,7 +169,6 @@ async function fetchTransactions() {
 
     updateDashboardSummary(data);
 
-    // Mapeamento visual das formas de pagamento
     const paymentBadges = {
       pix: '<span class="px-2 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-800 rounded">PIX</span>',
       boleto: '<span class="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 rounded">Boleto</span>',
@@ -217,7 +212,6 @@ async function fetchTransactions() {
   }
 }
 
-// Atualiza o resumo no topo da tela
 function updateDashboardSummary(transactions) {
   const sharedTotal = transactions
     .filter(t => t.is_shared)
@@ -234,7 +228,6 @@ function updateDashboardSummary(transactions) {
   }
 }
 
-// Salvar Novo Apontamento (Tratando compras parceladas)
 async function saveTransaction(e) {
   e.preventDefault();
   
@@ -278,14 +271,12 @@ async function saveTransaction(e) {
     document.getElementById("transaction-form").reset();
     document.getElementById("field-date").value = new Date().toISOString().split('T')[0];
     
-    // Atualiza a lista
     fetchTransactions();
   } catch (err) {
     alert("Erro ao salvar apontamento: " + err.message);
   }
 }
 
-// Alternar status PAGO / PENDENTE
 async function toggleTransactionStatus(id, currentStatus) {
   const newStatus = currentStatus === 'paid' ? 'pending' : 'paid';
   
@@ -302,12 +293,118 @@ async function toggleTransactionStatus(id, currentStatus) {
   }
 }
 
-// Placeholders das outras abas
-function renderCalendarioTab() {
-  document.getElementById("content-area").innerHTML = `
-    <h2 class="text-lg font-bold mb-2">🗓️ Previsão de Gastos (Próximos 12 Meses)</h2>
-    <p class="text-sm text-gray-600">Este módulo exibirá o calendário consolidado de compras parceladas e contas fixas projetadas para os próximos 12 meses.</p>
+// -------------------------------------------------------------
+// MÓDULO 2: PREVISÃO DOS PRÓXIMOS 12 MESES
+// -------------------------------------------------------------
+async function renderCalendarioTab() {
+  const content = document.getElementById("content-area");
+  
+  content.innerHTML = `
+    <div class="space-y-6">
+      <div class="flex justify-between items-center border-b pb-4">
+        <div>
+          <h2 class="text-lg font-bold text-gray-900">🗓️ Projeção de Gastos dos Próximos 12 Meses</h2>
+          <p class="text-xs text-gray-500 mt-0.5">Acompanhamento consolidado de compras parceladas e contas futuras</p>
+        </div>
+      </div>
+      
+      <div id="calendar-months-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <p class="text-sm text-gray-500">Calculando projeção dos próximos meses...</p>
+      </div>
+    </div>
   `;
+
+  try {
+    // Busca todas as transações cadastradas
+    const { data, error } = await _supabase
+      .from("transactions")
+      .select(`*, profiles(name)`)
+      .order("due_date", { ascending: true });
+
+    if (error) throw error;
+
+    const calendarContainer = document.getElementById("calendar-months-container");
+    
+    // Gera os próximos 12 meses a partir do mês atual
+    const today = new Date();
+    const monthsGrouped = {};
+
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const monthLabel = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      
+      monthsGrouped[key] = {
+        label: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
+        items: [],
+        totalShared: 0,
+        totalIndividual: 0
+      };
+    }
+
+    // Agrupa os lançamentos nos respectivos meses
+    (data || []).forEach(item => {
+      const itemDate = new Date(item.due_date);
+      const key = `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}`;
+      
+      if (monthsGrouped[key]) {
+        monthsGrouped[key].items.push(item);
+        if (item.is_shared) {
+          monthsGrouped[key].totalShared += Number(item.amount);
+        } else {
+          monthsGrouped[key].totalIndividual += Number(item.amount);
+        }
+      }
+    });
+
+    // Renderiza cada mês na tela
+    calendarContainer.innerHTML = Object.keys(monthsGrouped).map(key => {
+      const m = monthsGrouped[key];
+      const perPersonShared = m.totalShared / 2;
+
+      return `
+        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 flex flex-col justify-between shadow-sm hover:border-indigo-300 transition">
+          <div>
+            <div class="flex justify-between items-center border-b border-gray-200 pb-2 mb-3">
+              <h3 class="font-bold text-gray-900 text-sm">${m.label}</h3>
+              <span class="text-xs bg-indigo-100 text-indigo-800 font-semibold px-2 py-0.5 rounded">${m.items.length} conta(s)</span>
+            </div>
+
+            ${m.items.length === 0 ? `
+              <p class="text-xs text-gray-400 italic py-4 text-center">Nenhum compromisso para este mês.</p>
+            ` : `
+              <div class="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1">
+                ${m.items.map(it => `
+                  <div class="bg-white p-2 rounded border border-gray-200 text-xs flex justify-between items-center">
+                    <div>
+                      <div class="font-medium text-gray-800">${it.description}</div>
+                      <div class="text-gray-400 text-[10px]">${it.is_shared ? '50/50 Casa' : 'Individual'} • Venc: ${new Date(it.due_date).getDate()}</div>
+                    </div>
+                    <div class="font-bold text-gray-900">R$ ${Number(it.amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                  </div>
+                `).join('')}
+              </div>
+            `}
+          </div>
+
+          <!-- Resumo Financeiro do Mês -->
+          <div class="border-t border-gray-200 pt-3 mt-2 bg-white p-3 rounded-lg">
+            <div class="flex justify-between text-xs text-gray-600 mb-1">
+              <span>Total Casa (100%):</span>
+              <span class="font-bold text-gray-900">R$ ${m.totalShared.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+            </div>
+            <div class="flex justify-between text-xs text-indigo-700 font-bold bg-indigo-50 p-1.5 rounded">
+              <span>50% para cada:</span>
+              <span>R$ ${perPersonShared.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+  } catch (err) {
+    document.getElementById("calendar-months-container").innerHTML = `<p class="text-rose-600 text-sm">Erro ao gerar calendário: ${err.message}</p>`;
+  }
 }
 
 function renderInvestimentosTab() {
