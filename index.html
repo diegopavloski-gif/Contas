@@ -5,161 +5,233 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Controle Financeiro Familiar</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ink: '#0d1420',
+            panel: '#141f2e',
+            panel2: '#1a2c40',
+            edge: '#24405c'
+          }
+        }
+      }
+    }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Chart.js para a calculadora dinâmica de investimentos -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: radial-gradient(circle at 15% 0%, #163a52 0%, #0f1b28 45%, #0a0f18 100%) fixed;
+    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: #2c4a63; border-radius: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    .field-icon { position: absolute; left: 0.65rem; top: 50%; transform: translateY(-50%); pointer-events: none; }
+    .field-input { padding-left: 2.15rem; }
+  </style>
 </head>
-<body class="bg-gray-100 font-sans text-gray-900 min-h-screen">
+<body class="text-slate-200 font-sans min-h-screen">
 
-  <div class="max-w-6xl mx-auto p-4 md:p-6 space-y-6">
+  <div class="max-w-6xl mx-auto p-3 md:p-5 space-y-4">
 
     <!-- CABEÇALHO -->
-    <header class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200 gap-4">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-800">Controle Financeiro Familiar</h1>
-        <p class="text-sm text-gray-500">Gestão de contas compartilhadas, parcelamentos e investimentos</p>
+    <header class="flex flex-row justify-between items-center bg-panel/80 backdrop-blur p-4 rounded-2xl shadow-lg shadow-black/30 border border-white/5 gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-white shrink-0 shadow-lg shadow-blue-950/40">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14" r="1" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <div class="min-w-0">
+          <h1 class="text-lg md:text-2xl font-extrabold bg-gradient-to-r from-blue-400 via-cyan-400 to-teal-400 bg-clip-text text-transparent leading-tight truncate">Controle Financeiro Familiar</h1>
+          <p class="text-xs md:text-sm text-slate-400 truncate">Gestão de contas compartilhadas, parcelamentos e investimentos</p>
+        </div>
       </div>
-      <div id="status-box" class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded text-xs text-amber-700">
+      <div id="status-box" class="bg-amber-500/10 border border-amber-500/30 px-3 py-1.5 rounded-full text-[11px] text-amber-300 font-medium shrink-0 whitespace-nowrap">
         Iniciando conexão...
       </div>
     </header>
 
     <!-- CARDS DE RESUMO -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Total Compartilhado (Mês Atual)</span>
-        <div id="total-shared" class="text-2xl font-extrabold text-indigo-600 mt-1">R$ 0,00</div>
-        <span id="total-per-person" class="text-xs text-gray-500 mt-1 block">Metade do mês: R$ 0,00</span>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="bg-panel p-4 rounded-2xl shadow-lg shadow-black/20 border border-white/5 flex items-start gap-3">
+        <div class="shrink-0 w-10 h-10 rounded-xl bg-blue-500/15 text-blue-300 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg>
+        </div>
+        <div class="min-w-0">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Compartilhado (Mês)</span>
+          <div id="total-shared" class="text-xl font-extrabold text-blue-300 mt-0.5 truncate">R$ 0,00</div>
+          <span id="total-per-person" class="text-[11px] text-slate-500 block truncate">Metade do mês: R$ 0,00</span>
+        </div>
       </div>
 
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-        <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Total Devido (Pendentes Geral)</span>
-        <div id="total-devido-geral" class="text-2xl font-extrabold text-red-500 mt-1">R$ 0,00</div>
-        <span id="pending-count" class="text-xs text-gray-500 mt-1 block">0 conta(s)</span>
+      <div class="bg-panel p-4 rounded-2xl shadow-lg shadow-black/20 border border-white/5 flex items-start gap-3">
+        <div class="shrink-0 w-10 h-10 rounded-xl bg-rose-500/15 text-rose-300 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5"><path d="M12 3.5l9.5 16.5H2.5L12 3.5z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="0.6" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <div class="min-w-0">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Devido (Pendentes)</span>
+          <div id="total-devido-geral" class="text-xl font-extrabold text-rose-300 mt-0.5 truncate">R$ 0,00</div>
+          <span id="pending-count" class="text-[11px] text-slate-500 block truncate">0 conta(s)</span>
+        </div>
       </div>
 
     <!-- CARD 3: SALDO DO MÊS POR PESSOA (SALÁRIO - DESPESAS) -->
-    <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-      <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Saldo Sobrando no Mês</span>
-      <div id="resumo-usuarios-mes" class="text-sm font-semibold text-gray-700 mt-2 space-y-1">
-        <span class="text-xs text-gray-400">Carregando dados...</span>
+    <div class="bg-panel p-4 rounded-2xl shadow-lg shadow-black/20 border border-white/5 flex items-start gap-3">
+      <div class="shrink-0 w-10 h-10 rounded-xl bg-teal-500/15 text-teal-300 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-5 h-5"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 6h6v6"/></svg>
+      </div>
+      <div class="min-w-0 flex-1">
+        <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Saldo Sobrando no Mês</span>
+        <div id="resumo-usuarios-mes" class="text-sm font-semibold text-slate-200 mt-1 space-y-1">
+          <span class="text-xs text-slate-500">Carregando dados...</span>
+        </div>
       </div>
     </div>
     </div>
 
     <!-- MENSAGENS DE TRANSFERÊNCIA -->
-    <div id="box-acerto-contas" class="bg-indigo-50 border-l-4 border-indigo-600 p-4 rounded-xl text-sm text-indigo-900 font-medium">
-      Calculando transferências...
+    <div class="bg-sky-500/10 border-l-4 border-sky-400 p-3 rounded-xl text-sm text-sky-200 font-medium flex gap-2.5 items-start">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4 h-4 mt-0.5 shrink-0 text-sky-400"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg>
+      <div id="box-acerto-contas" class="min-w-0 flex-1">
+        Calculando transferências...
+      </div>
     </div>
 
     <!-- NAVEGAÇÃO -->
-    <div class="border-b border-gray-200 flex space-x-4">
-      <button onclick="alternarAba('sec-lancamentos', this)" class="btn-aba pb-2 border-b-2 border-indigo-600 text-indigo-600 font-bold text-sm">
+    <div class="border-b border-white/10 flex space-x-2">
+      <button onclick="alternarAba('sec-lancamentos', this)" class="btn-aba flex items-center px-4 py-2 rounded-t-lg bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-bold text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4 h-4 mr-1.5"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
         Lançamentos
       </button>
-      <button onclick="alternarAba('sec-calendario', this)" class="btn-aba pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+      <button onclick="alternarAba('sec-calendario', this)" class="btn-aba flex items-center px-4 py-2 rounded-t-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 font-medium text-sm transition">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4 h-4 mr-1.5"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
         Calendário (6 Meses)
       </button>
-      <button onclick="alternarAba('sec-investimentos', this)" class="btn-aba pb-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium text-sm">
+      <button onclick="alternarAba('sec-investimentos', this)" class="btn-aba flex items-center px-4 py-2 rounded-t-lg text-slate-400 hover:text-slate-200 hover:bg-white/5 font-medium text-sm transition">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4 h-4 mr-1.5"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
         Investimentos
       </button>
     </div>
 
     <!-- CONTEÚDO DAS ABAS -->
-    <main class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+    <main class="bg-panel/80 backdrop-blur p-4 md:p-5 rounded-2xl shadow-lg shadow-black/30 border border-white/5">
 
       <!-- ABA LANÇAMENTOS -->
-      <div id="sec-lancamentos" class="tab-content space-y-6">
-        <h2 class="text-lg font-bold text-gray-800">Novo Apontamento</h2>
+      <div id="sec-lancamentos" class="tab-content space-y-5">
+        <h2 class="text-lg font-bold text-slate-100">Novo Apontamento</h2>
         
-        <form id="form-lancamento" onsubmit="salvarLancamento(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <form id="form-lancamento" onsubmit="salvarLancamento(event)" class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Descrição</label>
-            <input type="text" id="lanc-descricao" required placeholder="Ex: Luz, Mercado, Notebook" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Descrição</label>
+            <div class="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="field-icon w-4 h-4 text-slate-500"><path d="M20.59 13.41L12 22l-9-9L11.59 4.41A2 2 0 0113 3.83H19a2 2 0 012 2v6.17a2 2 0 01-.41 1.24z"/><circle cx="16" cy="8" r="1" fill="currentColor" stroke="none"/></svg>
+              <input type="text" id="lanc-descricao" required placeholder="Ex: Luz, Mercado, Notebook" class="field-input w-full bg-panel2 border border-white/10 text-slate-100 placeholder-slate-500 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40">
+            </div>
           </div>
           
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Valor da Parcela / Total (R$)</label>
-            <input type="number" step="0.01" id="lanc-valor" required placeholder="0.00" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Valor da Parcela / Total (R$)</label>
+            <div class="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="field-icon w-4 h-4 text-slate-500"><circle cx="12" cy="12" r="9"/><path d="M9.5 15.2c.4.6 1.2 1 2.1 1 1.5 0 2.6-.8 2.6-2s-1-1.7-2.6-2c-1.6-.3-2.6-.8-2.6-2s1.1-2 2.6-2c.9 0 1.7.4 2.1 1M12 7v10"/></svg>
+              <input type="number" step="0.01" id="lanc-valor" required placeholder="0.00" class="field-input w-full bg-panel2 border border-white/10 text-slate-100 placeholder-slate-500 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40">
+            </div>
           </div>
           
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Data Vencimento</label>
-            <input type="date" id="lanc-data" required class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Data Vencimento</label>
+            <div class="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="field-icon w-4 h-4 text-slate-500"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+              <input type="date" id="lanc-data" required class="field-input w-full bg-panel2 border border-white/10 text-slate-100 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40 [color-scheme:dark]">
+            </div>
           </div>
           
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Categoria</label>
-            <select id="lanc-categoria" required class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
-              <option value="">Carregando categorias...</option>
-            </select>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Categoria</label>
+            <div class="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="field-icon w-4 h-4 text-slate-500"><path d="M20.59 13.41L12 22l-9-9L11.59 4.41A2 2 0 0113 3.83H19a2 2 0 012 2v6.17a2 2 0 01-.41 1.24z"/><circle cx="16" cy="8" r="1" fill="currentColor" stroke="none"/></svg>
+              <select id="lanc-categoria" required class="field-input w-full bg-panel2 border border-white/10 text-slate-100 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40">
+                <option value="">Carregando categorias...</option>
+              </select>
+            </div>
           </div>
           
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Quem Pagou / Perfil</label>
-            <select id="lanc-pessoa" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
-              <option value="">Carregando perfis...</option>
-            </select>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Quem Pagou / Perfil</label>
+            <div class="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="field-icon w-4 h-4 text-slate-500"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c1.2-3.5 4-5.5 7.5-5.5s6.3 2 7.5 5.5"/></svg>
+              <select id="lanc-pessoa" class="field-input w-full bg-panel2 border border-white/10 text-slate-100 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40">
+                <option value="">Carregando perfis...</option>
+              </select>
+            </div>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Forma de Pagamento</label>
-            <select id="lanc-pagamento" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
-              <option value="pix">PIX</option>
-              <option value="boleto">Boleto</option>
-              <option value="credit_card">Cartão de Crédito</option>
-              <option value="debit_card">Cartão de Débito</option>
-              <option value="cash">Dinheiro</option>
-            </select>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Forma de Pagamento</label>
+            <div class="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="field-icon w-4 h-4 text-slate-500"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M2.5 9.5h19"/></svg>
+              <select id="lanc-pagamento" class="field-input w-full bg-panel2 border border-white/10 text-slate-100 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40">
+                <option value="pix">PIX</option>
+                <option value="boleto">Boleto</option>
+                <option value="credit_card">Cartão de Crédito</option>
+                <option value="debit_card">Cartão de Débito</option>
+                <option value="cash">Dinheiro</option>
+              </select>
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="block text-xs font-semibold text-gray-600 mb-1">Parcela Atual</label>
-              <input type="number" id="lanc-parcela-atual" min="1" value="1" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Parcela Atual</label>
+              <input type="number" id="lanc-parcela-atual" min="1" value="1" class="w-full bg-panel2 border border-white/10 text-slate-100 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-gray-600 mb-1">Total Parcelas</label>
-              <input type="number" id="lanc-total-parcelas" min="1" value="1" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
+              <label class="block text-xs font-semibold text-slate-400 mb-1">Total Parcelas</label>
+              <input type="number" id="lanc-total-parcelas" min="1" value="1" class="w-full bg-panel2 border border-white/10 text-slate-100 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40">
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Status</label>
-            <select id="lanc-status" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-indigo-500">
-              <option value="pending">Pendente</option>
-              <option value="paid">Pago</option>
-            </select>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Status</label>
+            <div class="relative">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="field-icon w-4 h-4 text-slate-500"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.3 2.3L16 9.5"/></svg>
+              <select id="lanc-status" class="field-input w-full bg-panel2 border border-white/10 text-slate-100 rounded-lg p-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/40">
+                <option value="pending">Pendente</option>
+                <option value="paid">Pago</option>
+              </select>
+            </div>
           </div>
 
           <div class="flex items-end">
-            <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded hover:bg-indigo-700 transition">
+            <button type="submit" class="w-full flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium py-2 px-4 rounded-lg hover:from-blue-500 hover:to-cyan-500 transition shadow-lg shadow-blue-950/40">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 5v14M5 12h14"/></svg>
               Adicionar Apontamento
             </button>
           </div>
         </form>
 
         <!-- FILTROS E TABELA -->
-        <div class="pt-6 border-t space-y-4">
-          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <h3 class="text-md font-bold text-gray-800">Histórico de Lançamentos</h3>
+        <div class="pt-5 border-t border-white/10 space-y-3">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+            <h3 class="text-md font-bold text-slate-100">Histórico de Lançamentos</h3>
             
             <div class="flex flex-wrap gap-2 w-full md:w-auto">
-              <select id="filtro-mes" onchange="aplicarFiltrosEClassificacao()" class="border border-gray-300 rounded p-1.5 text-xs focus:outline-none focus:border-indigo-500">
+              <select id="filtro-mes" onchange="aplicarFiltrosEClassificacao()" class="bg-panel2 border border-white/10 text-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:border-blue-500">
                 <option value="todos">Todos os Meses</option>
               </select>
 
-              <select id="filtro-pessoa" onchange="aplicarFiltrosEClassificacao()" class="border border-gray-300 rounded p-1.5 text-xs focus:outline-none focus:border-indigo-500">
+              <select id="filtro-pessoa" onchange="aplicarFiltrosEClassificacao()" class="bg-panel2 border border-white/10 text-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:border-blue-500">
                 <option value="todos">Todas as Pessoas</option>
               </select>
 
-              <select id="filtro-status" onchange="aplicarFiltrosEClassificacao()" class="border border-gray-300 rounded p-1.5 text-xs focus:outline-none focus:border-indigo-500">
+              <select id="filtro-status" onchange="aplicarFiltrosEClassificacao()" class="bg-panel2 border border-white/10 text-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:border-blue-500">
                 <option value="todos">Todos os Status</option>
                 <option value="pending">Pendente</option>
                 <option value="paid">Pago</option>
               </select>
 
-              <select id="ordenar-por" onchange="aplicarFiltrosEClassificacao()" class="border border-gray-300 rounded p-1.5 text-xs bg-gray-50 focus:outline-none focus:border-indigo-500 font-medium">
+              <select id="ordenar-por" onchange="aplicarFiltrosEClassificacao()" class="bg-panel2 border border-white/10 text-slate-200 rounded-lg p-1.5 text-xs focus:outline-none focus:border-blue-500 font-medium">
                 <option value="vencimento-desc">Vencimento (Mais Recentes)</option>
                 <option value="vencimento-asc">Vencimento (Mais Antigos)</option>
                 <option value="valor-desc">Valor (Maior -> Menor)</option>
@@ -169,22 +241,22 @@
           </div>
           
           <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-gray-600">
-              <thead class="bg-gray-50 text-xs uppercase text-gray-500">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-white/5 text-xs uppercase text-slate-400">
                 <tr>
-                  <th class="p-3">Descrição</th>
-                  <th class="p-3">Categoria</th>
-                  <th class="p-3">Pessoa</th>
-                  <th class="p-3">Parcela</th>
-                  <th class="p-3">Vencimento</th>
-                  <th class="p-3">Valor</th>
-                  <th class="p-3">Status</th>
-                  <th class="p-3 text-center">Ações</th>
+                  <th class="p-2.5">Descrição</th>
+                  <th class="p-2.5">Categoria</th>
+                  <th class="p-2.5">Pessoa</th>
+                  <th class="p-2.5">Parcela</th>
+                  <th class="p-2.5">Vencimento</th>
+                  <th class="p-2.5">Valor</th>
+                  <th class="p-2.5">Status</th>
+                  <th class="p-2.5 text-center">Ações</th>
                 </tr>
               </thead>
-              <tbody id="tbody-lancamentos" class="divide-y divide-gray-200">
+              <tbody id="tbody-lancamentos" class="divide-y divide-white/5">
                 <tr>
-                  <td colspan="8" class="p-3 text-center text-gray-400">Carregando lançamentos...</td>
+                  <td colspan="8" class="p-3 text-center text-slate-500">Carregando lançamentos...</td>
                 </tr>
               </tbody>
             </table>
@@ -195,130 +267,151 @@
       <!-- ABA CALENDÁRIO -->
       <div id="sec-calendario" class="tab-content hidden space-y-4">
         <div>
-          <h2 class="text-lg font-bold text-gray-800">Calendário de Projeção (6 Meses)</h2>
-          <p class="text-xs text-gray-500">Acompanhamento mês a mês dos compromissos financeiros cadastrados</p>
+          <h2 class="text-lg font-bold text-slate-100">Calendário de Projeção (6 Meses)</h2>
+          <p class="text-xs text-slate-400">Acompanhamento mês a mês dos compromissos financeiros cadastrados</p>
         </div>
-        <div id="grid-calendario" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2"></div>
+        <div id="grid-calendario" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-2"></div>
       </div>
 
 <!-- ABA INVESTIMENTOS (ATUALIZADA) -->
-<div id="sec-investimentos" class="tab-content hidden space-y-6">
+<div id="sec-investimentos" class="tab-content hidden space-y-5">
   <div>
-    <h2 class="text-lg font-bold text-gray-800">Carteira de Renda Fixa (CDB)</h2>
-    <p class="text-xs text-gray-500">Acompanhamento de aportes, resgates, fechamentos mensais e projeção</p>
+    <h2 class="text-lg font-bold text-slate-100">Carteira de Renda Fixa (CDB)</h2>
+    <p class="text-xs text-slate-400">Acompanhamento de aportes, resgates, fechamentos mensais e projeção</p>
   </div>
 
   <!-- CARDS DE RESUMO DA RENDA FIXA (5 CARDS) -->
-  <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-      <span class="text-xs font-semibold text-gray-500 uppercase">Patrimônio Acumulado</span>
-      <div id="inv-total-acumulado" class="text-xl font-bold text-gray-800 mt-1">R$ 0,00</div>
-      <span class="text-[11px] text-gray-400">Saldo real atual nos CDBs</span>
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div class="bg-panel2 p-3.5 rounded-xl border border-white/5 border-t-2 border-t-sky-500 flex items-center gap-2.5">
+      <div class="shrink-0 w-8 h-8 rounded-lg bg-sky-500/15 text-sky-300 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4 h-4"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>
+      </div>
+      <div class="min-w-0">
+        <span class="text-[10px] font-semibold text-slate-400 uppercase block">Patrimônio</span>
+        <div id="inv-total-acumulado" class="text-base font-bold text-sky-300 truncate">R$ 0,00</div>
+      </div>
     </div>
 
-    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-      <span class="text-xs font-semibold text-gray-500 uppercase">Rendimento Esperado/Mês</span>
-      <div id="inv-rendimento-esperado-mes" class="text-xl font-bold text-teal-600 mt-1">R$ 0,00</div>
-      <span class="text-[11px] text-teal-700">Estimativa com a taxa informada</span>
+    <div class="bg-panel2 p-3.5 rounded-xl border border-white/5 border-t-2 border-t-teal-500 flex items-center gap-2.5">
+      <div class="shrink-0 w-8 h-8 rounded-lg bg-teal-500/15 text-teal-300 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4 h-4"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 6h6v6"/></svg>
+      </div>
+      <div class="min-w-0">
+        <span class="text-[10px] font-semibold text-slate-400 uppercase block">Rend./Mês</span>
+        <div id="inv-rendimento-esperado-mes" class="text-base font-bold text-teal-300 truncate">R$ 0,00</div>
+      </div>
     </div>
 
-    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-      <span class="text-xs font-semibold text-gray-500 uppercase">Rendimento no Ano</span>
-      <div id="inv-rendimento-ano" class="text-xl font-bold text-emerald-600 mt-1">R$ 0,00</div>
-      <span class="text-[11px] text-emerald-700">Lucro líquido registrado</span>
+    <div class="bg-panel2 p-3.5 rounded-xl border border-white/5 border-t-2 border-t-emerald-500 flex items-center gap-2.5">
+      <div class="shrink-0 w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4 h-4"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+      </div>
+      <div class="min-w-0">
+        <span class="text-[10px] font-semibold text-slate-400 uppercase block">Rend. no Ano</span>
+        <div id="inv-rendimento-ano" class="text-base font-bold text-emerald-300 truncate">R$ 0,00</div>
+      </div>
     </div>
 
-    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-      <span class="text-xs font-semibold text-gray-500 uppercase">Aporte Mês Atual</span>
-      <div id="inv-aporte-mes" class="text-xl font-bold text-indigo-600 mt-1">R$ 0,00</div>
-      <span class="text-[11px] text-gray-500">Aportado neste mês</span>
+    <div class="bg-panel2 p-3.5 rounded-xl border border-white/5 border-t-2 border-t-blue-500 flex items-center gap-2.5">
+      <div class="shrink-0 w-8 h-8 rounded-lg bg-blue-500/15 text-blue-300 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4 h-4"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <div class="min-w-0">
+        <span class="text-[10px] font-semibold text-slate-400 uppercase block">Aporte Mês</span>
+        <div id="inv-aporte-mes" class="text-base font-bold text-blue-300 truncate">R$ 0,00</div>
+      </div>
     </div>
 
-    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-      <span class="text-xs font-semibold text-gray-500 uppercase">Meta Mensal Casal</span>
-      <div id="inv-meta-casal" class="text-xl font-bold text-purple-600 mt-1">R$ 1.000,00</div>
-      <span id="inv-meta-individual" class="text-[11px] text-gray-500">Diego: R$ 500 | Gise: R$ 500</span>
+    <div class="bg-panel2 p-3.5 rounded-xl border border-white/5 border-t-2 border-t-lime-500 flex items-center gap-2.5 col-span-2 md:col-span-1">
+      <div class="shrink-0 w-8 h-8 rounded-lg bg-lime-500/15 text-lime-300 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4 h-4"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+      <div class="min-w-0">
+        <span class="text-[10px] font-semibold text-slate-400 uppercase block">Meta Casal</span>
+        <div id="inv-meta-casal" class="text-base font-bold text-lime-300 truncate">R$ 1.000,00</div>
+        <span id="inv-meta-individual" class="text-[10px] text-slate-500 block truncate">Diego: R$ 500 | Gise: R$ 500</span>
+      </div>
     </div>
   </div>
 
   <!-- CALCULADORA E SIMULADOR DINÂMICO -->
-  <div class="bg-gray-900 text-white p-6 rounded-xl shadow-lg space-y-6">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+  <div class="bg-gradient-to-br from-panel2 to-ink text-white p-5 rounded-2xl shadow-lg shadow-black/30 border border-white/5 space-y-5">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
       <div>
-        <h3 class="text-base font-bold">Projeção Dinâmica (Horizonte em Meses)</h3>
-        <p class="text-xs text-gray-400">Simulação iniciada automaticamente a partir do patrimônio acumulado real</p>
+        <h3 class="text-base font-bold text-slate-100">Projeção Dinâmica (Horizonte em Meses)</h3>
+        <p class="text-xs text-slate-400">Simulação iniciada automaticamente a partir do patrimônio acumulado real</p>
       </div>
-      <div class="text-right bg-gray-800 p-2.5 rounded-lg border border-gray-700">
-        <span class="text-[10px] text-gray-400 uppercase block">Valor Esperado ao Final</span>
+      <div class="text-right bg-panel p-2.5 rounded-lg border border-white/10">
+        <span class="text-[10px] text-slate-400 uppercase block">Valor Esperado ao Final</span>
         <span id="sim-valor-final" class="text-xl font-extrabold text-emerald-400">R$ 0,00</span>
       </div>
     </div>
 
     <!-- GRÁFICO -->
-    <div class="h-60 w-full">
+    <div class="h-56 w-full">
       <canvas id="graficoProjecao"></canvas>
     </div>
 
     <!-- CONTROLES DO SIMULADOR (METAS INDIVIDUAIS + TAXA + MESES) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-800 text-xs">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-white/10 text-xs">
       <div>
-        <label class="flex justify-between font-semibold text-gray-300 mb-1">
+        <label class="flex justify-between font-semibold text-slate-300 mb-1">
           <span>Meta Aporte (Diego):</span>
-          <span id="disp-meta-diego" class="text-indigo-400 font-bold">R$ 500</span>
+          <span id="disp-meta-diego" class="text-blue-400 font-bold">R$ 500</span>
         </label>
-        <input type="range" id="sim-meta-diego" min="0" max="10000" step="100" value="500" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
+        <input type="range" id="sim-meta-diego" min="0" max="10000" step="100" value="500" oninput="atualizarSimulacao()" class="w-full accent-blue-500 cursor-pointer">
       </div>
 
       <div>
-        <label class="flex justify-between font-semibold text-gray-300 mb-1">
+        <label class="flex justify-between font-semibold text-slate-300 mb-1">
           <span>Meta Aporte (Gise):</span>
-          <span id="disp-meta-gise" class="text-indigo-400 font-bold">R$ 500</span>
+          <span id="disp-meta-gise" class="text-lime-400 font-bold">R$ 500</span>
         </label>
-        <input type="range" id="sim-meta-gise" min="0" max="10000" step="100" value="500" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
+        <input type="range" id="sim-meta-gise" min="0" max="10000" step="100" value="500" oninput="atualizarSimulacao()" class="w-full accent-lime-500 cursor-pointer">
       </div>
 
       <div>
-        <label class="flex justify-between font-semibold text-gray-300 mb-1">
+        <label class="flex justify-between font-semibold text-slate-300 mb-1">
           <span>Taxa Esperada (% a.a.):</span>
-          <span id="disp-taxa" class="text-indigo-400 font-bold">10.5%</span>
+          <span id="disp-taxa" class="text-sky-400 font-bold">10.5%</span>
         </label>
-        <input type="range" id="sim-taxa" min="5" max="20" step="0.5" value="10.5" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
+        <input type="range" id="sim-taxa" min="5" max="20" step="0.5" value="10.5" oninput="atualizarSimulacao()" class="w-full accent-sky-500 cursor-pointer">
       </div>
 
       <div>
-        <label class="flex justify-between font-semibold text-gray-300 mb-1">
+        <label class="flex justify-between font-semibold text-slate-300 mb-1">
           <span>Horizonte (Meses - Máx 12):</span>
-          <span id="disp-meses" class="text-indigo-400 font-bold">12 meses</span>
+          <span id="disp-meses" class="text-teal-400 font-bold">12 meses</span>
         </label>
-        <input type="range" id="sim-meses" min="1" max="12" step="1" value="12" oninput="atualizarSimulacao()" class="w-full accent-indigo-500 cursor-pointer">
+        <input type="range" id="sim-meses" min="1" max="12" step="1" value="12" oninput="atualizarSimulacao()" class="w-full accent-teal-500 cursor-pointer">
       </div>
     </div>
   </div>
 
   <!-- REGISTRO E TABELA DE HISTÓRICO -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
     
     <!-- REGISTRAR APORTE / RESGATE / FECHAMENTO -->
-    <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
-      <h3 class="font-bold text-gray-800 text-sm">Registrar Operação no CDB</h3>
+    <div class="bg-panel2 p-4 rounded-xl border border-white/5 space-y-3">
+      <h3 class="font-bold text-slate-100 text-sm">Registrar Operação no CDB</h3>
       <form id="form-cdb-operacao" onsubmit="salvarOperacaoCDB(event)" class="space-y-3">
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">Título do CDB</label>
-          <select id="cdb-titulo-id" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Título do CDB</label>
+          <select id="cdb-titulo-id" required class="w-full bg-panel border border-white/10 text-slate-100 rounded-lg p-2 text-xs focus:outline-none focus:border-blue-500">
             <option value="">Carregando títulos...</option>
           </select>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">Quem Pagou / Perfil</label>
-          <select id="cdb-perfil-id" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Quem Pagou / Perfil</label>
+          <select id="cdb-perfil-id" required class="w-full bg-panel border border-white/10 text-slate-100 rounded-lg p-2 text-xs focus:outline-none focus:border-blue-500">
             <option value="">Carregando perfis...</option>
           </select>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">Tipo de Operação</label>
-          <select id="cdb-tipo-op" onchange="alternarCamposOperacao()" class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Tipo de Operação</label>
+          <select id="cdb-tipo-op" onchange="alternarCamposOperacao()" class="w-full bg-panel border border-white/10 text-slate-100 rounded-lg p-2 text-xs focus:outline-none focus:border-blue-500">
             <option value="deposit">Aporte (Novo Investimento)</option>
             <option value="yield">Rendimento Fechado do Mês</option>
             <option value="closing">Fechamento do Mês (Congelar Saldo)</option>
@@ -327,32 +420,33 @@
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">Valor (R$)</label>
-          <input type="number" step="0.01" id="cdb-valor" required placeholder="0.00" class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Valor (R$)</label>
+          <input type="number" step="0.01" id="cdb-valor" required placeholder="0.00" class="w-full bg-panel border border-white/10 text-slate-100 placeholder-slate-500 rounded-lg p-2 text-xs focus:outline-none focus:border-blue-500">
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">Data da Operação</label>
-          <input type="date" id="cdb-data" required class="w-full border border-gray-300 rounded p-2 text-xs focus:outline-none focus:border-indigo-500">
+          <label class="block text-xs font-semibold text-slate-400 mb-1">Data da Operação</label>
+          <input type="date" id="cdb-data" required class="w-full bg-panel border border-white/10 text-slate-100 rounded-lg p-2 text-xs focus:outline-none focus:border-blue-500 [color-scheme:dark]">
         </div>
 
-        <div id="box-campo-ir" class="hidden bg-amber-50 p-2.5 rounded border border-amber-200 space-y-1">
-          <label class="block text-[11px] font-bold text-amber-800">Dias de Permanência (Para IR):</label>
-          <input type="number" id="cdb-dias-investido" placeholder="Ex: 90, 200, 400 dias" class="w-full border border-amber-300 rounded p-1.5 text-xs bg-white">
+        <div id="box-campo-ir" class="hidden bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/30 space-y-1">
+          <label class="block text-[11px] font-bold text-amber-300">Dias de Permanência (Para IR):</label>
+          <input type="number" id="cdb-dias-investido" placeholder="Ex: 90, 200, 400 dias" class="w-full bg-panel border border-amber-500/30 text-slate-100 rounded-lg p-1.5 text-xs">
         </div>
 
-        <button type="submit" class="w-full bg-indigo-600 text-white font-medium py-2 px-4 rounded hover:bg-indigo-700 transition text-xs">
+        <button type="submit" class="w-full flex items-center justify-center gap-1.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-medium py-2 px-4 rounded-lg hover:from-blue-500 hover:to-cyan-500 transition text-xs shadow-lg shadow-blue-950/40">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="M20 6L9 17l-5-5"/></svg>
           Salvar Operação
         </button>
       </form>
     </div>
 
     <!-- TABELA DE HISTÓRICO COM AÇÕES -->
-    <div class="lg:col-span-2 bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
-      <h3 class="font-bold text-gray-800 text-sm">Histórico de Movimentações em CDB</h3>
+    <div class="lg:col-span-2 bg-panel2 p-4 rounded-xl border border-white/5 space-y-3">
+      <h3 class="font-bold text-slate-100 text-sm">Histórico de Movimentações em CDB</h3>
       <div class="overflow-x-auto">
-        <table class="w-full text-left text-xs text-gray-600">
-          <thead class="bg-white uppercase text-gray-400 border-b">
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-white/5 uppercase text-slate-400 border-b border-white/10">
             <tr>
               <th class="p-2">Data</th>
               <th class="p-2">Título</th>
@@ -363,9 +457,9 @@
               <th class="p-2 text-center">Ações</th>
             </tr>
           </thead>
-          <tbody id="tbody-cdb-historico" class="divide-y divide-gray-200">
+          <tbody id="tbody-cdb-historico" class="divide-y divide-white/5">
             <tr>
-              <td colspan="7" class="p-3 text-center text-gray-400">Carregando movimentações...</td>
+              <td colspan="7" class="p-3 text-center text-slate-500">Carregando movimentações...</td>
             </tr>
           </tbody>
         </table>
@@ -374,6 +468,7 @@
 
   </div>
 </div>
+</div>
 
   <script>
     function alternarAba(idAba, elementoBotao) {
@@ -381,12 +476,12 @@
       document.getElementById(idAba).classList.remove('hidden');
 
       document.querySelectorAll('.btn-aba').forEach(btn => {
-        btn.classList.remove('border-indigo-600', 'text-indigo-600', 'font-bold');
-        btn.classList.add('border-transparent', 'text-gray-500', 'font-medium');
+        btn.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-cyan-600', 'text-white', 'font-bold');
+        btn.classList.add('text-slate-400', 'font-medium');
       });
 
-      elementoBotao.classList.remove('border-transparent', 'text-gray-500', 'font-medium');
-      elementoBotao.classList.add('border-indigo-600', 'text-indigo-600', 'font-bold');
+      elementoBotao.classList.remove('text-slate-400', 'font-medium');
+      elementoBotao.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-cyan-600', 'text-white', 'font-bold');
 
       if (idAba === 'sec-calendario' && typeof carregarCalendario12Meses === 'function') {
         carregarCalendario12Meses();
