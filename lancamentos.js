@@ -15,7 +15,7 @@ async function carregarLancamentos() {
     if (error) throw error;
 
     if (statusBox) {
-      statusBox.className = 'bg-emerald-50 border-l-4 border-emerald-500 p-3 rounded text-xs text-emerald-700';
+      statusBox.className = 'bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-full text-[11px] text-emerald-300 font-medium shrink-0 whitespace-nowrap';
       statusBox.innerText = '✅ Conectado ao Supabase com sucesso!';
     }
 
@@ -28,7 +28,7 @@ async function carregarLancamentos() {
   } catch (err) {
     console.error('Erro ao buscar lançamentos:', err);
     if (statusBox) {
-      statusBox.className = 'bg-red-50 border-l-4 border-red-500 p-3 rounded text-xs text-red-700';
+      statusBox.className = 'bg-rose-500/10 border border-rose-500/30 px-3 py-1.5 rounded-full text-[11px] text-rose-300 font-medium shrink-0 whitespace-nowrap';
       statusBox.innerText = 'Erro: ' + (err.message || err);
     }
   }
@@ -201,7 +201,7 @@ function atualizarResumoTotais(dados) {
   if (elResumoUsuarios) {
     const todosNomes = Array.from(new Set([...Object.keys(gastosMesAtual), ...Object.keys(salariosMesAtual)]));
     if (todosNomes.length === 0) {
-      elResumoUsuarios.innerHTML = `<span class="text-xs text-gray-400">Nenhum lançamento no mês.</span>`;
+      elResumoUsuarios.innerHTML = `<span class="text-xs text-slate-500">Nenhum lançamento no mês.</span>`;
     } else {
       elResumoUsuarios.innerHTML = todosNomes.map(nome => {
         const salario = salariosMesAtual[nome] || 0;
@@ -209,13 +209,13 @@ function atualizarResumoTotais(dados) {
         const saldoResta = salario - gasto;
 
         return `
-          <div class="flex justify-between items-center text-xs py-0.5 border-b border-gray-100 last:border-0">
-            <span class="font-semibold text-gray-700">${nome}:</span>
+          <div class="flex justify-between items-center text-xs py-0.5 border-b border-white/5 last:border-0">
+            <span class="font-semibold text-slate-300">${nome}:</span>
             <div class="text-right">
-              <span class="font-bold ${saldoResta >= 0 ? 'text-emerald-600' : 'text-red-600'}">
+              <span class="font-bold ${saldoResta >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
                 R$ ${saldoResta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </span>
-              <div class="text-[10px] text-gray-400">(Sal: R$ ${salario.toLocaleString('pt-BR')} - Gastos: R$ ${gasto.toLocaleString('pt-BR')})</div>
+              <div class="text-[10px] text-slate-500">(Sal: R$ ${salario.toLocaleString('pt-BR')} - Gastos: R$ ${gasto.toLocaleString('pt-BR')})</div>
             </div>
           </div>
         `;
@@ -231,7 +231,7 @@ function atualizarResumoTotais(dados) {
     elAcertoContainer.innerHTML = `
       <div class="space-y-1">
         <div>${msgAtual}</div>
-        <div class="text-xs text-indigo-700 pt-1.5 border-t border-indigo-200">${msgProxima}</div>
+        <div class="text-xs text-sky-300 pt-1.5 border-t border-sky-500/20">${msgProxima}</div>
       </div>
     `;
   }
@@ -341,7 +341,7 @@ function renderizarTabela(dados) {
   if (!tbody) return;
 
   if (!dados || dados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="p-3 text-center text-gray-400">Nenhum lançamento encontrado para os filtros selecionados.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="p-2.5 text-center text-slate-500">Nenhum lançamento encontrado para os filtros selecionados.</td></tr>';
     return;
   }
 
@@ -355,8 +355,8 @@ function renderizarTabela(dados) {
     // BOTÃO CLICÁVEL DE STATUS (Pendente <-> Pago)
     const statusFormatado = item.status === 'paid' ? 'Pago' : 'Pendente';
     const statusClasse = item.status === 'paid' 
-      ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
-      : 'bg-amber-100 text-amber-800 hover:bg-amber-200';
+      ? 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25' 
+      : 'bg-amber-500/15 text-amber-300 hover:bg-amber-500/25';
 
     const btnStatusHtml = `<button onclick="alternarStatusLancamento('${item.id}', '${item.status}')" class="${statusClasse} text-xs px-2 py-1 rounded font-semibold cursor-pointer transition" title="Clique para alterar status">${statusFormatado}</button>`;
 
@@ -365,17 +365,19 @@ function renderizarTabela(dados) {
     const exibicaoParcela = totParcelas > 1 ? `${numParcela}/${totParcelas}` : 'À vista';
 
     const tr = document.createElement('tr');
-    tr.className = 'border-b border-gray-100 hover:bg-gray-50';
+    tr.className = 'border-b border-white/5 hover:bg-white/5';
     tr.innerHTML = `
-      <td class="p-3 font-medium">${item.description || '-'} ${isSalario ? '<span class="text-[10px] bg-emerald-50 text-emerald-600 font-bold px-1.5 py-0.5 rounded ml-1">Receita</span>' : ''}</td>
-      <td class="p-3">${nomeCategoria}</td>
-      <td class="p-3 font-semibold text-gray-700">${nomePessoa}</td>
-      <td class="p-3 font-semibold text-gray-700">${exibicaoParcela}</td>
-      <td class="p-3">${item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
-      <td class="p-3 font-bold ${isSalario ? 'text-emerald-600' : 'text-gray-800'}">R$ ${Number(item.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-      <td class="p-3">${btnStatusHtml}</td>
-      <td class="p-3 text-center">
-        <button onclick="excluirLancamento('${item.id}')" class="text-red-500 hover:text-red-700 font-bold text-xs">Excluir</button>
+      <td class="p-2.5 font-medium text-slate-200">${item.description || '-'} ${isSalario ? '<span class="text-[10px] bg-emerald-500/15 text-emerald-300 font-bold px-1.5 py-0.5 rounded ml-1">Receita</span>' : ''}</td>
+      <td class="p-2.5">${nomeCategoria}</td>
+      <td class="p-2.5 font-semibold text-slate-300">${nomePessoa}</td>
+      <td class="p-2.5 font-semibold text-slate-300">${exibicaoParcela}</td>
+      <td class="p-2.5">${item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+      <td class="p-2.5 font-bold ${isSalario ? 'text-emerald-400' : 'text-slate-100'}">R$ ${Number(item.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+      <td class="p-2.5">${btnStatusHtml}</td>
+      <td class="p-2.5 text-center">
+        <button onclick="excluirLancamento('${item.id}')" title="Excluir" class="inline-flex items-center justify-center w-7 h-7 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-4 h-4"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13"/></svg>
+        </button>
       </td>
     `;
     tbody.appendChild(tr);
