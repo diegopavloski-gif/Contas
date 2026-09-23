@@ -38,20 +38,26 @@ async function carregarCalendario12Meses() {
         return item.due_date.startsWith(m.chave);
       });
 
-      let totalGeralMes = 0;
+      let totalDespesasMes = 0;
       let totalCompartilhadoMes = 0;
-      const totalPorUsuario = {};
+      const totalDespesasPorUsuario = {};
 
       itensDoMes.forEach(item => {
         const valor = Number(item.amount || 0);
-        totalGeralMes += valor;
+        const nomeCategoria = (item.categories && item.categories.name) ? item.categories.name.toLowerCase() : '';
+        const isSalario = nomeCategoria.includes('salário') || nomeCategoria.includes('salario') || nomeCategoria.includes('rendimento');
 
-        if (item.is_shared) {
-          totalCompartilhadoMes += valor;
+        // Soma nos totais apenas se NÃO for salário/rendimento (Apenas Despesas)
+        if (!isSalario) {
+          totalDespesasMes += valor;
+
+          if (item.is_shared) {
+            totalCompartilhadoMes += valor;
+          }
+
+          const nomePessoa = (item.profiles && item.profiles.name) ? item.profiles.name : 'Outros';
+          totalDespesasPorUsuario[nomePessoa] = (totalDespesasPorUsuario[nomePessoa] || 0) + valor;
         }
-
-        const nomePessoa = (item.profiles && item.profiles.name) ? item.profiles.name : 'Outros';
-        totalPorUsuario[nomePessoa] = (totalPorUsuario[nomePessoa] || 0) + valor;
       });
 
       // HTML dos lançamentos do mês
@@ -60,20 +66,27 @@ async function carregarCalendario12Meses() {
         listaItensHTML = '<div class="text-xs text-gray-400 italic py-4 text-center">Nenhum compromisso para este mês.</div>';
       } else {
         listaItensHTML = itensDoMes.map(item => {
+          const nomeCategoria = item.categories?.name || '';
+          const isSalario = nomeCategoria.toLowerCase().includes('salário') || 
+                            nomeCategoria.toLowerCase().includes('salario') || 
+                            nomeCategoria.toLowerCase().includes('rendimento');
+
           const statusBadge = item.status === 'paid' 
             ? '<span class="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-medium">Pago</span>'
             : '<span class="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium">Pendente</span>';
 
           const nomePessoa = item.profiles?.name ? `(${item.profiles.name})` : '';
+          const valorClasse = isSalario ? 'text-emerald-600' : 'text-gray-700';
 
           return `
             <div class="flex justify-between items-center text-xs py-1.5 border-b border-gray-100 last:border-0">
               <div class="truncate pr-2">
                 <span class="font-medium text-gray-800">${item.description || 'Sem descrição'}</span>
-                <span class="text-[11px] text-gray-400 block">${item.categories?.name || 'Geral'} ${nomePessoa}</span>
+                ${isSalario ? '<span class="text-[9px] bg-emerald-50 text-emerald-600 font-bold px-1 py-0.2 rounded ml-1">Receita</span>' : ''}
+                <span class="text-[11px] text-gray-400 block">${nomeCategoria || 'Geral'} ${nomePessoa}</span>
               </div>
               <div class="text-right flex-shrink-0">
-                <div class="font-semibold text-gray-700">R$ ${Number(item.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                <div class="font-semibold ${valorClasse}">R$ ${Number(item.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
                 <div class="mt-0.5">${statusBadge}</div>
               </div>
             </div>
@@ -81,19 +94,19 @@ async function carregarCalendario12Meses() {
         }).join('');
       }
 
-      // HTML do resumo individual por usuário
-      const nomesUsuarios = Object.keys(totalPorUsuario);
+      // HTML do resumo individual por usuário (Despesas Apenas)
+      const nomesUsuarios = Object.keys(totalDespesasPorUsuario);
       let resumoUsuariosHTML = '';
 
       if (nomesUsuarios.length > 0) {
         resumoUsuariosHTML = nomesUsuarios.map(nome => `
           <div class="flex justify-between items-center text-xs">
             <span class="text-gray-600">${nome}:</span>
-            <span class="font-bold text-gray-800">R$ ${totalPorUsuario[nome].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            <span class="font-bold text-gray-800">R$ ${totalDespesasPorUsuario[nome].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
           </div>
         `).join('');
       } else {
-        resumoUsuariosHTML = '<div class="text-xs text-gray-400">Sem lançamentos</div>';
+        resumoUsuariosHTML = '<div class="text-xs text-gray-400">Sem despesas no mês</div>';
       }
 
       // Card do Mês
@@ -120,7 +133,7 @@ async function carregarCalendario12Meses() {
         <div class="pt-3 border-t border-gray-200 space-y-2 bg-gray-50 -mx-4 -mb-4 p-4 rounded-b-xl">
           <div class="flex justify-between items-center text-xs font-bold text-gray-700">
             <span>Total Geral do Mês:</span>
-            <span class="text-indigo-600 text-sm">R$ ${totalGeralMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            <span class="text-indigo-600 text-sm">R$ ${totalDespesasMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
           </div>
 
           <div class="pt-2 border-t border-gray-200 space-y-1">
