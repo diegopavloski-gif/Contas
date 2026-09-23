@@ -1,6 +1,10 @@
 let meuGraficoProjecao = null;
 let patrimonioAtualReal = 0;
 
+// Variáveis de memória para reter dados reais entre interações dos sliders
+let historicoSaldoPorMes = {};
+let historicoAportesPorUsuario = {};
+
 async function carregarInvestimentos() {
   try {
     await carregarSelectsInvestimentos();
@@ -16,7 +20,6 @@ async function carregarSelectsInvestimentos() {
 
   if (typeof _supabase === 'undefined') return;
 
-  // Carrega Títulos
   if (selectTitulo) {
     let { data: titulos, error } = await _supabase.from('cdb_investments').select('*');
     if ((!titulos || titulos.length === 0) && !error) {
@@ -35,7 +38,6 @@ async function carregarSelectsInvestimentos() {
     }
   }
 
-  // Carrega Perfis
   if (selectPerfil) {
     const { data: perfis } = await _supabase.from('profiles').select('*');
     if (perfis && perfis.length > 0) {
@@ -64,7 +66,6 @@ async function carregarDadosCDB() {
   const anoAtual = agora.getFullYear();
   const mesAtualStr = `${anoAtual}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
 
-  // Agrupa operações por mês (YYYY-MM)
   const operacoesPorMes = {};
   let rendimentoAno = 0;
   let aporteMesAtual = 0;
@@ -83,7 +84,7 @@ async function carregarDadosCDB() {
     if (!mData.porUsuario[nomePerfil]) mData.porUsuario[nomePerfil] = 0;
 
     if (item.type === 'closing') {
-      mData.fechamento = valor; // Define o saldo absoluto congelado
+      mData.fechamento = valor;
     } else if (item.type === 'deposit') {
       mData.aportes += valor;
       mData.porUsuario[nomePerfil] += valor;
@@ -97,31 +98,27 @@ async function carregarDadosCDB() {
     }
   });
 
-  // Calcula o Saldo Acumulado Mês a Mês transportando o saldo anterior
-  const saldoPorMes = {};
-  const aportesPorUsuarioMes = {};
+  historicoSaldoPorMes = {};
+  historicoAportesPorUsuario = {};
   const mesesOrdenados = Object.keys(operacoesPorMes).sort();
 
   let saldoAcumuladoAnterior = 0;
 
   mesesOrdenados.forEach(mChave => {
     const op = operacoesPorMes[mChave];
-    aportesPorUsuarioMes[mChave] = op.porUsuario;
+    historicoAportesPorUsuario[mChave] = op.porUsuario;
 
     if (op.fechamento !== null) {
-      // Se houver Fechamento de Mês, fixa o valor absoluto
       saldoAcumuladoAnterior = op.fechamento;
     } else {
-      // Caso contrário, acumula sobre o saldo do mês anterior
       saldoAcumuladoAnterior = saldoAcumuladoAnterior + op.aportes + op.rendimentos - op.resgates;
     }
 
-    saldoPorMes[mChave] = saldoAcumuladoAnterior;
+    historicoSaldoPorMes[mChave] = saldoAcumuladoAnterior;
   });
 
   patrimonioAtualReal = saldoAcumuladoAnterior;
 
-  // Atualiza indicadores do topo
   const elTotal = document.getElementById('inv-total-acumulado');
   const elRend = document.getElementById('inv-rendimento-ano');
   const elAporte = document.getElementById('inv-aporte-mes');
@@ -131,7 +128,7 @@ async function carregarDadosCDB() {
   if (elAporte) elAporte.innerText = `R$ ${aporteMesAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
   renderizarTabelaCDB([...(transacoes || [])].reverse());
-  atualizarSimulacao(saldoPorMes, aportesPorUsuarioMes);
+  atualizarSimulacao();
 }
 
 function alternarCamposOperacao() {
@@ -254,8 +251,7 @@ function renderizarTabelaCDB(dados) {
   }).join('');
 }
 
-// PROJEÇÃO HÍBRIDA (HISTÓRICO REAL + PROJEÇÃO FUTURA COM TAGS)
-function atualizarSimulacao(saldoPorMes = {}, aportesPorUsuarioMes = {}) {
+function atualizarSimulacao() {
   const elMetaDiego = document.getElementById('sim-meta-diego');
   const elMetaGise = document.getElementById('sim-meta-gise');
   const elTaxa = document.getElementById('sim-taxa');
@@ -291,15 +287,15 @@ function atualizarSimulacao(saldoPorMes = {}, aportesPorUsuarioMes = {}) {
   const dadosEvolucao = [];
   const tagsDetalhadas = [];
 
-  // 1. Plota Meses Históricos
-  const mesesHistoricos = Object.keys(saldoPorMes).sort();
+  // 1. Plota Meses Históricos Fixos sem Perder os Dados ao Mover Sliders
+  const mesesHistoricos = Object.keys(historicoSaldoPorMes).sort();
   mesesHistoricos.forEach(mChave => {
     const [ano, mes] = mChave.split('-');
     const nomeMes = mesesNomes[parseInt(mes, 10) - 1];
     labels.push(`${nomeMes}/${ano.substring(2)} (Real)`);
-    dadosEvolucao.push(saldoPorMes[mChave]);
+    dadosEvolucao.push(historicoSaldoPorMes[mChave]);
 
-    const ap = aportesPorUsuarioMes[mChave] || {};
+    const ap = historicoAportesPorUsuario[mChave] || {};
     const partesAporte = [];
     Object.keys(ap).forEach(usr => {
       if (ap[usr] > 0) partesAporte.push(`${usr}: R$ ${ap[usr].toLocaleString('pt-BR')}`);
@@ -308,15 +304,21 @@ function atualizarSimulacao(saldoPorMes = {}, aportesPorUsuarioMes = {}) {
     tagsDetalhadas.push(tagTexto);
   });
 
-  // 2. Plota Projeção Futura
+  // 2. Continua a Projeção a Partir do ÚLTIMO Mês do Histórico Real
   let montanteProjetado = patrimonioAtualReal;
-  const dataRef = new Date();
-  let mIndex = dataRef.getMonth();
-  let aIndex = dataRef.getFullYear();
+  
+  let anoUltimo = new Date().getFullYear();
+  let mesUltimo = new Date().getMonth();
+
+  if (mesesHistoricos.length > 0) {
+    const ult = mesesHistoricos[mesesHistoricos.length - 1].split('-');
+    anoUltimo = parseInt(ult[0], 10);
+    mesUltimo = parseInt(ult[1], 10) - 1;
+  }
 
   for (let i = 1; i <= mesesProjecaoFutura; i++) {
-    const nomeMes = mesesNomes[(mIndex + i) % 12];
-    const anoDoMes = aIndex + Math.floor((mIndex + i) / 12);
+    const nomeMes = mesesNomes[(mesUltimo + i) % 12];
+    const anoDoMes = anoUltimo + Math.floor((mesUltimo + i) / 12);
     labels.push(`${nomeMes}/${String(anoDoMes).substring(2)} (Proj)`);
 
     montanteProjetado = (montanteProjetado + metaCasalTotal) * (1 + taxaMensal);
