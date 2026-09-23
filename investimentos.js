@@ -223,28 +223,34 @@ function renderizarTabelaCDB(dados) {
   if (!tbody) return;
 
   if (dados.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="p-3 text-center text-gray-400">Nenhuma movimentação registrada.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="p-2.5 text-center text-slate-500">Nenhuma movimentação registrada.</td></tr>';
     return;
   }
 
   tbody.innerHTML = dados.map(item => {
     let tipoBadge = '';
-    if (item.type === 'deposit') tipoBadge = '<span class="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded font-bold">Aporte</span>';
-    else if (item.type === 'yield') tipoBadge = '<span class="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded font-bold">Rendimento</span>';
-    else if (item.type === 'closing') tipoBadge = '<span class="text-purple-600 bg-purple-50 px-2 py-0.5 rounded font-bold">Fechamento Mês</span>';
-    else tipoBadge = '<span class="text-amber-600 bg-amber-50 px-2 py-0.5 rounded font-bold">Resgate</span>';
+    if (item.type === 'deposit') tipoBadge = '<span class="text-blue-300 bg-blue-500/15 px-2 py-0.5 rounded font-bold">Aporte</span>';
+    else if (item.type === 'yield') tipoBadge = '<span class="text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded font-bold">Rendimento</span>';
+    else if (item.type === 'closing') tipoBadge = '<span class="text-lime-300 bg-lime-500/15 px-2 py-0.5 rounded font-bold">Fechamento Mês</span>';
+    else tipoBadge = '<span class="text-amber-300 bg-amber-500/15 px-2 py-0.5 rounded font-bold">Resgate</span>';
 
     return `
-      <tr>
+      <tr class="hover:bg-white/5">
         <td class="p-2">${new Date(item.transaction_date + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
-        <td class="p-2 font-medium text-gray-800">${item.cdb_investments?.title_name || '-'}</td>
-        <td class="p-2 font-semibold text-gray-700">${item.profiles?.name || '-'}</td>
+        <td class="p-2 font-medium text-slate-200">${item.cdb_investments?.title_name || '-'}</td>
+        <td class="p-2 font-semibold text-slate-300">${item.profiles?.name || '-'}</td>
         <td class="p-2">${tipoBadge}</td>
-        <td class="p-2 font-semibold">R$ ${Number(item.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-        <td class="p-2 text-red-500">R$ ${Number(item.ir_discounted || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-        <td class="p-2 text-center space-x-1">
-          <button onclick="editarOperacaoCDB('${item.id}', ${item.amount})" class="text-indigo-600 hover:text-indigo-900 font-semibold px-1">Editar</button>
-          <button onclick="excluirOperacaoCDB('${item.id}')" class="text-red-500 hover:text-red-700 font-semibold px-1">Excluir</button>
+        <td class="p-2 font-semibold text-slate-200">R$ ${Number(item.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        <td class="p-2 text-rose-400">R$ ${Number(item.ir_discounted || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+        <td class="p-2 text-center">
+          <div class="inline-flex items-center gap-0.5">
+            <button onclick="editarOperacaoCDB('${item.id}', ${item.amount})" title="Editar" class="inline-flex items-center justify-center w-6 h-6 rounded-lg text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-3.5 h-3.5"><path d="M16.5 3.5l4 4L7 21l-4.5 1 1-4.5 13-13z"/></svg>
+            </button>
+            <button onclick="excluirOperacaoCDB('${item.id}')" title="Excluir" class="inline-flex items-center justify-center w-6 h-6 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-3.5 h-3.5"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13"/></svg>
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -354,7 +360,7 @@ function desenharGrafico(labels, dadosEvolucao, tagsDetalhadas) {
           tension: 0.2,
           pointRadius: 5,
           pointHoverRadius: 8,
-          pointBackgroundColor: '#818cf8'
+          pointBackgroundColor: '#2dd4bf'
         }
       ]
     },
@@ -362,8 +368,13 @@ function desenharGrafico(labels, dadosEvolucao, tagsDetalhadas) {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: '#9ca3af', font: { size: 11 } } },
+        legend: { labels: { color: '#cbd5e1', font: { size: 11 } } },
         tooltip: {
+          backgroundColor: '#141f2e',
+          titleColor: '#e2e8f0',
+          bodyColor: '#cbd5e1',
+          borderColor: '#24405c',
+          borderWidth: 1,
           callbacks: {
             label: function(context) {
               const val = context.raw || 0;
@@ -377,13 +388,13 @@ function desenharGrafico(labels, dadosEvolucao, tagsDetalhadas) {
         }
       },
       scales: {
-        x: { ticks: { color: '#9ca3af', font: { size: 10 } }, grid: { color: '#374151' } },
+        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.06)' } },
         y: { 
           ticks: { 
-            color: '#9ca3af',
+            color: '#94a3b8',
             callback: value => 'R$ ' + value.toLocaleString('pt-BR')
           }, 
-          grid: { color: '#374151' } 
+          grid: { color: 'rgba(255,255,255,0.06)' } 
         }
       }
     }
