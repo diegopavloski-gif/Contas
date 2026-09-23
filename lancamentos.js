@@ -107,6 +107,23 @@ async function salvarLancamento(event) {
   carregarLancamentos();
 }
 
+// NOVO: ALTERNAR STATUS RÁPIDO (PENDENTE <-> PAGO)
+async function alternarStatusLancamento(id, statusAtual) {
+  const novoStatus = statusAtual === 'paid' ? 'pending' : 'paid';
+
+  const { error } = await _supabase
+    .from('transactions')
+    .update({ status: novoStatus })
+    .eq('id', id);
+
+  if (error) {
+    alert('Erro ao atualizar status: ' + error.message);
+    return;
+  }
+
+  carregarLancamentos();
+}
+
 async function excluirLancamento(id) {
   if (!confirm('Deseja excluir este registro?')) return;
 
@@ -133,17 +150,20 @@ function atualizarResumoTotais(dados) {
   let pendentesContador = 0;
 
   const gastosMesAtual = {};
+  const salariosMesAtual = {};
   const gastosMesProximo = {};
 
   dados.forEach(item => {
     const valor = Number(item.amount || 0);
+    const nomeCategoria = (item.categories && item.categories.name) ? item.categories.name.toLowerCase() : '';
+    const isSalario = nomeCategoria.includes('salário') || nomeCategoria.includes('salario') || nomeCategoria.includes('rendimento');
 
-    if (item.status === 'pending') {
+    if (item.status === 'pending' && !isSalario) {
       totalDevidoGeral += valor;
       pendentesContador++;
     }
 
-    if (item.due_date && item.is_shared) {
+    if (item.due_date) {
       const p = item.due_date.split('-');
       const itemAno = parseInt(p[0]);
       const itemMes = parseInt(p[1]) - 1;
@@ -151,11 +171,15 @@ function atualizarResumoTotais(dados) {
       const nomePessoa = (item.profiles && item.profiles.name) ? item.profiles.name : 'Outros';
 
       if (itemAno === anoAtual && itemMes === mesAtual) {
-        totalMesAtual += valor;
-        gastosMesAtual[nomePessoa] = (gastosMesAtual[nomePessoa] || 0) + valor;
+        if (isSalario) {
+          salariosMesAtual[nomePessoa] = (salariosMesAtual[nomePessoa] || 0) + valor;
+        } else if (item.is_shared) {
+          totalMesAtual += valor;
+          gastosMesAtual[nomePessoa] = (gastosMesAtual[nomePessoa] || 0) + valor;
+        }
       }
 
-      if (itemAno === anoProximo && itemMes === mesProximo) {
+      if (itemAno === anoProximo && itemMes === mesProximo && !isSalario && item.is_shared) {
         gastosMesProximo[nomePessoa] = (gastosMesProximo[nomePessoa] || 0) + valor;
       }
     }
@@ -173,18 +197,29 @@ function atualizarResumoTotais(dados) {
   if (elPorPessoa) elPorPessoa.innerText = `Metade do mês: R$ ${(totalMesAtual / 2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   if (elPendentes) elPendentes.innerText = `${pendentesContador} conta(s)`;
 
-  // PREENCHE CARD 3
+  // PREENCHE CARD 3 (EXIBINDO SALDO SOBRANDO: SALÁRIO - GASTOS)
   if (elResumoUsuarios) {
-    const nomes = Object.keys(gastosMesAtual);
-    if (nomes.length === 0) {
+    const todosNomes = Array.from(new Set([...Object.keys(gastosMesAtual), ...Object.keys(salariosMesAtual)]));
+    if (todosNomes.length === 0) {
       elResumoUsuarios.innerHTML = `<span class="text-xs text-gray-400">Nenhum lançamento no mês.</span>`;
     } else {
-      elResumoUsuarios.innerHTML = nomes.map(nome => `
-        <div class="flex justify-between items-center text-xs">
-          <span>${nome}:</span>
-          <span class="font-bold text-gray-800">R$ ${gastosMesAtual[nome].toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-        </div>
-      `).join('');
+      elResumoUsuarios.innerHTML = todosNomes.map(nome => {
+        const salario = salariosMesAtual[nome] || 0;
+        const gasto = gastosMesAtual[nome] || 0;
+        const saldoResta = salario - gasto;
+
+        return `
+          <div class="flex justify-between items-center text-xs py-0.5 border-b border-gray-100 last:border-0">
+            <span class="font-semibold text-gray-700">${nome}:</span>
+            <div class="text-right">
+              <span class="font-bold ${saldoResta >= 0 ? 'text-emerald-600' : 'text-red-600'}">
+                R$ ${saldoResta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+              <div class="text-[10px] text-gray-400">(Sal: R$ ${salario.toLocaleString('pt-BR')} - Gastos: R$ ${gasto.toLocaleString('pt-BR')})</div>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
   }
 
@@ -227,12 +262,22 @@ function preencherOpcoesDeFiltros(dados) {
   const selectMes = document.getElementById('filtro-mes');
   const selectPessoa = document.getElementById('filtro-pessoa');
 
+  const agora = new Date();
+  const anoAtual = agora.getFullYear();
+  const mesAtual = String(agora.getMonth() + 1).padStart(2, '0');
+  const chaveMesAtual = `${anoAtual}-${mesAtual}`;
+
   if (selectMes) {
     selectMes.innerHTML = '<option value="todos">Todos os Meses</option>';
     const mesesSet = new Set();
+    
+    // Garante que o mês atual exista nas opções
+    mesesSet.add(chaveMesAtual);
+
     dados.forEach(d => {
       if (d.due_date) mesesSet.add(d.due_date.substring(0, 7));
     });
+
     Array.from(mesesSet).sort().reverse().forEach(m => {
       const p = m.split('-');
       const opt = document.createElement('option');
@@ -240,6 +285,9 @@ function preencherOpcoesDeFiltros(dados) {
       opt.innerText = `${p[1]}/${p[0]}`;
       selectMes.appendChild(opt);
     });
+
+    // PADRÃO DE VISUALIZAÇÃO: Mês Atual
+    selectMes.value = chaveMesAtual;
   }
 
   if (selectPessoa) {
@@ -279,7 +327,7 @@ function aplicarFiltrosEClassificacao() {
 
   filtrados.sort((a, b) => {
     if (ordemSel === 'vencimento-desc') return new Date(b.due_date) - new Date(a.due_date);
-    if (ordemSel === 'vencimento-asc') return new Date(a.due_date) - new Date(a.due_date);
+    if (ordemSel === 'vencimento-asc') return new Date(a.due_date) - new Date(b.due_date);
     if (ordemSel === 'valor-desc') return (b.amount || 0) - (a.amount || 0);
     if (ordemSel === 'valor-asc') return (a.amount || 0) - (b.amount || 0);
     return 0;
@@ -301,22 +349,31 @@ function renderizarTabela(dados) {
   dados.forEach(item => {
     const nomeCategoria = item.categories?.name || (item.is_shared ? 'Compartilhada' : 'Pessoal');
     const nomePessoa = item.profiles?.name || '-';
+    
+    const isSalario = nomeCategoria.toLowerCase().includes('salário') || nomeCategoria.toLowerCase().includes('salario') || nomeCategoria.toLowerCase().includes('rendimento');
+
+    // BOTÃO CLICÁVEL DE STATUS (Pendente <-> Pago)
     const statusFormatado = item.status === 'paid' ? 'Pago' : 'Pendente';
-    const statusClasse = item.status === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800';
+    const statusClasse = item.status === 'paid' 
+      ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' 
+      : 'bg-amber-100 text-amber-800 hover:bg-amber-200';
+
+    const btnStatusHtml = `<button onclick="alternarStatusLancamento('${item.id}', '${item.status}')" class="${statusClasse} text-xs px-2 py-1 rounded font-semibold cursor-pointer transition" title="Clique para alterar status">${statusFormatado}</button>`;
 
     const numParcela = item.current_installment || item.installment_number || 1;
     const totParcelas = item.total_installments || 1;
     const exibicaoParcela = totParcelas > 1 ? `${numParcela}/${totParcelas}` : 'À vista';
 
     const tr = document.createElement('tr');
+    tr.className = 'border-b border-gray-100 hover:bg-gray-50';
     tr.innerHTML = `
-      <td class="p-3 font-medium">${item.description || '-'}</td>
+      <td class="p-3 font-medium">${item.description || '-'} ${isSalario ? '<span class="text-[10px] bg-emerald-50 text-emerald-600 font-bold px-1.5 py-0.5 rounded ml-1">Receita</span>' : ''}</td>
       <td class="p-3">${nomeCategoria}</td>
       <td class="p-3 font-semibold text-gray-700">${nomePessoa}</td>
       <td class="p-3 font-semibold text-gray-700">${exibicaoParcela}</td>
       <td class="p-3">${item.due_date ? new Date(item.due_date + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}</td>
-      <td class="p-3 font-semibold">R$ ${Number(item.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-      <td class="p-3"><span class="${statusClasse} text-xs px-2 py-1 rounded font-medium">${statusFormatado}</span></td>
+      <td class="p-3 font-bold ${isSalario ? 'text-emerald-600' : 'text-gray-800'}">R$ ${Number(item.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+      <td class="p-3">${btnStatusHtml}</td>
       <td class="p-3 text-center">
         <button onclick="excluirLancamento('${item.id}')" class="text-red-500 hover:text-red-700 font-bold text-xs">Excluir</button>
       </td>
