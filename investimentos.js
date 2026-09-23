@@ -16,6 +16,7 @@ async function carregarSelectsInvestimentos() {
 
   if (typeof _supabase === 'undefined') return;
 
+  // Carrega Títulos
   if (selectTitulo) {
     let { data: titulos, error } = await _supabase.from('cdb_investments').select('*');
     if ((!titulos || titulos.length === 0) && !error) {
@@ -34,6 +35,7 @@ async function carregarSelectsInvestimentos() {
     }
   }
 
+  // Carrega Perfis
   if (selectPerfil) {
     const { data: perfis } = await _supabase.from('profiles').select('*');
     if (perfis && perfis.length > 0) {
@@ -62,48 +64,64 @@ async function carregarDadosCDB() {
   const anoAtual = agora.getFullYear();
   const mesAtualStr = `${anoAtual}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
 
-  // Agrupamento de dados por mês (YYYY-MM) para cálculo preciso de saldo congelado
-  const saldoPorMes = {};
-  const aportesPorUsuarioMes = {};
+  // Agrupa operações por mês (YYYY-MM)
+  const operacoesPorMes = {};
   let rendimentoAno = 0;
   let aporteMesAtual = 0;
 
   (transacoes || []).forEach(item => {
     if (!item.transaction_date) return;
-    const mesChave = item.transaction_date.substring(0, 7); // Ex: "2026-08"
+    const mesChave = item.transaction_date.substring(0, 7);
     const valor = Number(item.amount || 0);
     const nomePerfil = item.profiles?.name || 'Não identificado';
 
-    if (!saldoPorMes[mesChave]) saldoPorMes[mesChave] = 0;
-    if (!aportesPorUsuarioMes[mesChave]) aportesPorUsuarioMes[mesChave] = {};
-    if (!aportesPorUsuarioMes[mesChave][nomePerfil]) aportesPorUsuarioMes[mesChave][nomePerfil] = 0;
+    if (!operacoesPorMes[mesChave]) {
+      operacoesPorMes[mesChave] = { fechamento: null, aportes: 0, resgates: 0, rendimentos: 0, porUsuario: {} };
+    }
 
-    // Se for fechamento de mês, CONGELA e DEFINE o saldo daquele mês exatamente como o valor informado
+    const mData = operacoesPorMes[mesChave];
+    if (!mData.porUsuario[nomePerfil]) mData.porUsuario[nomePerfil] = 0;
+
     if (item.type === 'closing') {
-      saldoPorMes[mesChave] = valor;
+      mData.fechamento = valor; // Define o saldo absoluto congelado
     } else if (item.type === 'deposit') {
-      saldoPorMes[mesChave] += valor;
-      aportesPorUsuarioMes[mesChave][nomePerfil] += valor;
+      mData.aportes += valor;
+      mData.porUsuario[nomePerfil] += valor;
       if (mesChave === mesAtualStr) aporteMesAtual += valor;
     } else if (item.type === 'yield') {
-      saldoPorMes[mesChave] += valor;
+      mData.rendimentos += valor;
       if (item.transaction_date.startsWith(String(anoAtual))) rendimentoAno += valor;
     } else if (item.type === 'withdrawal') {
-      saldoPorMes[mesChave] -= valor;
+      mData.resgates += valor;
       if (item.transaction_date.startsWith(String(anoAtual))) rendimentoAno -= Number(item.ir_discounted || 0);
     }
   });
 
-  // Calcula o patrimônio acumulado real baseado no último Fechamento / Saldo apurado
-  const mesesOrdenados = Object.keys(saldoPorMes).sort();
-  if (mesesOrdenados.length > 0) {
-    const ultimoMes = mesesOrdenados[mesesOrdenados.length - 1];
-    patrimonioAtualReal = saldoPorMes[ultimoMes];
-  } else {
-    patrimonioAtualReal = 0;
-  }
+  // Calcula o Saldo Acumulado Mês a Mês transportando o saldo anterior
+  const saldoPorMes = {};
+  const aportesPorUsuarioMes = {};
+  const mesesOrdenados = Object.keys(operacoesPorMes).sort();
 
-  // Atualiza indicadores de tela
+  let saldoAcumuladoAnterior = 0;
+
+  mesesOrdenados.forEach(mChave => {
+    const op = operacoesPorMes[mChave];
+    aportesPorUsuarioMes[mChave] = op.porUsuario;
+
+    if (op.fechamento !== null) {
+      // Se houver Fechamento de Mês, fixa o valor absoluto
+      saldoAcumuladoAnterior = op.fechamento;
+    } else {
+      // Caso contrário, acumula sobre o saldo do mês anterior
+      saldoAcumuladoAnterior = saldoAcumuladoAnterior + op.aportes + op.rendimentos - op.resgates;
+    }
+
+    saldoPorMes[mChave] = saldoAcumuladoAnterior;
+  });
+
+  patrimonioAtualReal = saldoAcumuladoAnterior;
+
+  // Atualiza indicadores do topo
   const elTotal = document.getElementById('inv-total-acumulado');
   const elRend = document.getElementById('inv-rendimento-ano');
   const elAporte = document.getElementById('inv-aporte-mes');
@@ -112,7 +130,6 @@ async function carregarDadosCDB() {
   if (elRend) elRend.innerText = `R$ ${rendimentoAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
   if (elAporte) elAporte.innerText = `R$ ${aporteMesAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
-  // Inverte ordem para exibir os mais recentes no topo da tabela
   renderizarTabelaCDB([...(transacoes || [])].reverse());
   atualizarSimulacao(saldoPorMes, aportesPorUsuarioMes);
 }
@@ -274,7 +291,7 @@ function atualizarSimulacao(saldoPorMes = {}, aportesPorUsuarioMes = {}) {
   const dadosEvolucao = [];
   const tagsDetalhadas = [];
 
-  // 1. Plota Meses Históricos com Fechamento/Aportes Reais
+  // 1. Plota Meses Históricos
   const mesesHistoricos = Object.keys(saldoPorMes).sort();
   mesesHistoricos.forEach(mChave => {
     const [ano, mes] = mChave.split('-');
@@ -282,7 +299,6 @@ function atualizarSimulacao(saldoPorMes = {}, aportesPorUsuarioMes = {}) {
     labels.push(`${nomeMes}/${ano.substring(2)} (Real)`);
     dadosEvolucao.push(saldoPorMes[mChave]);
 
-    // Monta a Tag com quem aportou no mês
     const ap = aportesPorUsuarioMes[mChave] || {};
     const partesAporte = [];
     Object.keys(ap).forEach(usr => {
@@ -292,7 +308,7 @@ function atualizarSimulacao(saldoPorMes = {}, aportesPorUsuarioMes = {}) {
     tagsDetalhadas.push(tagTexto);
   });
 
-  // 2. Plota Projeção para os Próximos Meses a partir do Saldo Atual
+  // 2. Plota Projeção Futura
   let montanteProjetado = patrimonioAtualReal;
   const dataRef = new Date();
   let mIndex = dataRef.getMonth();
